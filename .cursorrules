@@ -1,0 +1,155 @@
+---
+description: Reglas 80/20 para construir front-end con Shadcn + React + Tailwind usando diseños de Figma vía MCP (sin estilos inline, con tokens)
+globs:
+  - "src/**/*.{tsx,ts,js}"
+  - "src/**/*.{css,scss}"
+  - "components/**/*.{tsx,ts}"
+  - "app/**/*.{tsx,ts}"
+alwaysApply: true
+---
+
+# 🎯 Objetivo
+Construir un front-end **escalable, limpio y consistente**, mapeando diseños desde **Figma (MCP)** hacia **Shadcn UI + React + Tailwind**.  
+**Sin estilos inline**. **Siempre tokens o theme vars**. **Reusar componentes antes de crear nuevos.**
+
+---
+
+## 🔑 Principios 80/20
+1. **Reuse-first:** usar componentes Shadcn existentes o locales antes de crear uno nuevo.  
+2. **Token-first:** todos los valores visuales deben provenir de Tailwind theme o CSS vars (`hsl(var(--...))`, `theme(...)`).  
+3. **Sin estilos inline:** prohibido `style={{...}}` o clases con valores literales (`text-[#123456]`, `p-[13px]`).  
+4. **Variantes > duplicados:** extender con **CVA** (`class-variance-authority`) o `cn()`; no duplicar componentes.  
+5. **Accesible por defecto:** respetar Radix/ARIA, `focus-visible`, `disabled`, `dark mode`.  
+6. **Match con Figma:** buscar token exacto o el más cercano; si no existe, proponerlo en el PR (no hardcodear).
+7. **Componentes agnosticos a caso de uso** Los componentes que sean reutilizables, hazlos agnósticos al caso de uso, con una capa de abstracción para que puedan ser usados en distintos casos y contenidos con flexibilidad.
+
+---
+
+## 🧭 Figma → Shadcn
+1. **Identificar** el componente base (Button, Input, Dialog, Card, Tabs, Badge, etc.).  
+2. **Usar tokens** de `tailwind.config.ts` o `globals.css` (`--background`, `--foreground`, `--primary`).  
+3. **Ajustar con variantes (CVA)** cuando cambien colores o tamaños recurrentes.  
+4. **Evitar duplicar** componentes por estilo; preferir variantes o slots.  
+5. **Crear nuevo componente solo si:**  
+   - No existe en Shadcn ni en el proyecto.  
+   - Se reutilizará al menos 2 veces.  
+   - Se diseña con API mínima, variantes y documentación breve.
+
+---
+
+## 🧱 Estructura
+```
+components/
+  ui/              # componentes base de Shadcn
+  composite/       # wrappers compuestos (reutilizan ui/*)
+  data-display/    # tablas, listados, cards
+  form/            # inputs, selects, schema forms
+lib/
+  utils.ts         # cn(), helpers
+styles/
+  globals.css      # tokens CSS (Shadcn)
+  tailwind.config.ts # theme/tokens/extensiones
+```
+
+---
+
+## ✅ Haz
+- Usa `className={cn(...)}`
+- Define variantes con **CVA** en el mismo archivo o en `styles`.
+- Extrae patrones repetidos a `composite/` (`PageHeader`, `EmptyState`, `StatCard`).
+- Implementa estados `hover`, `focus-visible`, `aria-*`, `data-[state=...]`.
+- Usa `dark:` y `hsl(var(--...))` para modo oscuro.
+
+---
+
+## 🚫 Evita
+- `style={{...}}`, `text-[#xxxxxx]`, `p-[13px]`, `shadow-[...]`.
+- Duplicar componentes solo por color o tamaño.
+- Clases únicas o `!important`.
+- Crear componentes sin variantes, sin reuso ni documentación.
+
+---
+
+## 🧱 Tokens & Theme (Shadcn)
+- Colores: `bg-background`, `text-foreground`, `border-border`, `bg-primary`, `text-muted-foreground`.
+- Spacing: definidos por Tailwind (`p-2`, `gap-4`, `rounded-md`), ajustados a escala del theme.
+- Nuevos tokens: declarar en `globals.css` y mapear en `tailwind.config.ts`.  
+  Ejemplo:
+  ```css
+  :root {
+    --brand: 220 90% 56%;
+    --brand-foreground: 0 0% 100%;
+  }
+  ```
+
+---
+
+## 🧩 Ejemplo (Button con variantes)
+```tsx
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        brand: "bg-[hsl(var(--brand))] text-[hsl(var(--brand-foreground))] hover:bg-[hsl(var(--brand)/.9)]"
+      },
+      size: {
+        sm: "h-8 px-3",
+        md: "h-9 px-4",
+        lg: "h-10 px-6"
+      }
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "md"
+    }
+  }
+)
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {}
+
+export function Button({ className, variant, size, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  )
+}
+```
+
+---
+
+## 🧰 Flujo de trabajo (MCP Figma → Código)
+1. Recibir el frame de Figma con nombre y enlace claro.  
+2. Identificar componentes Shadcn equivalentes.  
+3. Aplicar variantes/tokens necesarios.  
+4. Verificar estados (`hover`, `focus`, `disabled`, `dark`).  
+5. Validar spacing, jerarquía y contraste.  
+6. Documentar en PR: captura Figma + tokens nuevos.
+
+---
+
+## 📋 Checklist antes de commit
+- [ ] Sin estilos inline ni valores literales.  
+- [ ] Todos los valores visuales provienen de tokens o theme.  
+- [ ] Componentes reutilizan Shadcn o variantes existentes.  
+- [ ] Si se agregó token nuevo, está documentado.  
+- [ ] Dark mode y accesibilidad correctos.  
+- [ ] PR incluye referencia Figma y nota breve.  
+
+---
+
+## 🧠 Convenciones rápidas
+- Componentes: **PascalCase**.  
+- Archivos: **kebab-case**.  
+- Props públicas mínimas; preferir composición (`children`).  
+- Añadir JSDoc breve en componentes compuestos.
+
+---
