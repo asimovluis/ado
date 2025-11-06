@@ -147,6 +147,12 @@ export default function ViajesPage() {
 
   const { blocks, activeBlock, activeBlockId, setActiveBlock, updateBlockStatus, addMessageToBlock } = useBlocks(initialBlocks)
 
+  // Calcular progreso de viabilización
+  const viabilizadosCount = blocks.filter(
+    (block) => block.viabilizacionStatus === "viabilizado"
+  ).length
+  const totalBlocks = blocks.length
+
   const blockOptions = blocks.map((block) => ({
     id: block.id,
     label: block.title,
@@ -199,6 +205,9 @@ export default function ViajesPage() {
           </>
         }
         onBack={() => router.push("/proyectos")}
+        federacionName="Atletismo"
+        viabilizadosCount={viabilizadosCount}
+        totalBlocks={totalBlocks}
         rightActions={
           <>
             <motion.div

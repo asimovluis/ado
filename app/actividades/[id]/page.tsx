@@ -72,6 +72,12 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
     addMessageToBlock,
   } = useBlocks(initialBlocks)
 
+  // Calcular progreso de viabilización
+  const viabilizadosCount = blocks.filter(
+    (block) => block.viabilizacionStatus === "viabilizado"
+  ).length
+  const totalBlocks = blocks.length
+
   // Preparar opciones para el selector de bloques
   const blockOptions = blocks.map((block) => ({
     id: block.id,
@@ -127,6 +133,9 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
         }
         backButtonText="Proyectos"
         onBack={() => router.push("/actividades")}
+        federacionName="Atletismo"
+        viabilizadosCount={viabilizadosCount}
+        totalBlocks={totalBlocks}
         rightActions={
           <>
             <motion.div
