@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
@@ -152,14 +152,13 @@ export default function ViajesPage() {
     label: block.title,
   }))
 
+  // Handler para cuando se hace clic en el botón de comentarios de un card
   const handleCommentClick = (blockId: string) => {
     const blockExists = blocks.some((block) => block.id === blockId)
     if (blockExists) {
       setActiveBlock(blockId)
-      // Usar setTimeout para asegurar que el estado se actualice antes de abrir el panel
-      setTimeout(() => {
-        setIsChatPanelOpen(true)
-      }, 0)
+      // Abrir el panel inmediatamente
+      setIsChatPanelOpen(true)
     }
   }
 
@@ -304,15 +303,15 @@ export default function ViajesPage() {
           </div>
         </main>
         <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlockId && activeBlock && (
+          {isChatPanelOpen && activeBlockId && (
             <ChatPanel
-              viabilizacionStatus={activeBlock.viabilizacionStatus}
+              viabilizacionStatus={activeBlock?.viabilizacionStatus || "pendiente"}
               onViabilizacionStatusChange={(status) => {
                 if (activeBlockId) {
                   updateBlockStatus(activeBlockId, status)
                 }
               }}
-              messages={activeBlock.messages}
+              messages={activeBlock?.messages || []}
               onClose={() => setIsChatPanelOpen(false)}
               onSend={handleSendMessage}
               blocks={blockOptions}

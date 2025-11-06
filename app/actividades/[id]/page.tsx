@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
@@ -83,10 +83,8 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
     const blockExists = blocks.some((block) => block.id === blockId)
     if (blockExists) {
       setActiveBlock(blockId)
-      // Usar setTimeout para asegurar que el estado se actualice antes de abrir el panel
-      setTimeout(() => {
-        setIsChatPanelOpen(true)
-      }, 0)
+      // Abrir el panel inmediatamente
+      setIsChatPanelOpen(true)
     }
   }
 
@@ -785,15 +783,15 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
           </Tabs>
         </main>
         <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlockId && activeBlock && (
+          {isChatPanelOpen && activeBlockId && (
             <ChatPanel
-              viabilizacionStatus={activeBlock.viabilizacionStatus}
+              viabilizacionStatus={activeBlock?.viabilizacionStatus || "pendiente"}
               onViabilizacionStatusChange={(status) => {
                 if (activeBlockId) {
                   updateBlockStatus(activeBlockId, status)
                 }
               }}
-              messages={activeBlock.messages}
+              messages={activeBlock?.messages || []}
               onClose={() => setIsChatPanelOpen(false)}
               onSend={handleSendMessage}
               blocks={blockOptions}
@@ -808,4 +806,5 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
     </div>
   )
 }
+
 
