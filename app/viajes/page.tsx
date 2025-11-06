@@ -303,6 +303,26 @@ export default function ViajesPage() {
                           </div>
                         </div>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus(travel.id)}
+                          onStatusChange={(status) => {
+                            updateBlockStatus(travel.id, status)
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick(travel.id)
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                   </motion.div>
                 )

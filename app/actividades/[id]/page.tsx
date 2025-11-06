@@ -353,6 +353,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           </p>
                         </div>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("sobre-actividad")}
+                          onStatusChange={(status) => updateBlockStatus("sobre-actividad", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("sobre-actividad")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                   </div>
                 </div>
@@ -391,6 +409,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           10 Mujeres deportistas
                         </p>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("mujeres-deportistas")}
+                          onStatusChange={(status) => updateBlockStatus("mujeres-deportistas", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("mujeres-deportistas")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                     <Card className="relative gap-6 w-full max-w-[920px]">
                       <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
@@ -490,6 +526,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           </Table>
                         </div>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("hombres-deportistas")}
+                          onStatusChange={(status) => updateBlockStatus("hombres-deportistas", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("hombres-deportistas")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                     <Card className="relative gap-6 w-full max-w-[920px]">
                       <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
@@ -594,6 +648,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           </Table>
                         </div>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("mujeres-tecnico-staff")}
+                          onStatusChange={(status) => updateBlockStatus("mujeres-tecnico-staff", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("mujeres-tecnico-staff")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                     <Card className="relative gap-6 w-full max-w-[920px]">
                       <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
@@ -623,6 +695,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           10 Hombres técnico/staff
                         </p>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("hombres-tecnico-staff")}
+                          onStatusChange={(status) => updateBlockStatus("hombres-tecnico-staff", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("hombres-tecnico-staff")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                   </div>
                 </div>
@@ -765,6 +855,24 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           </Table>
                         </div>
                       </CardContent>
+                      {/* Sección de botones al final del card */}
+                      <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        <ViabilizacionStatusSelector
+                          status={getBlockStatus("gastos")}
+                          onStatusChange={(status) => updateBlockStatus("gastos", status)}
+                        />
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("gastos")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
                     </Card>
                   </div>
                 </div>
