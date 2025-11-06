@@ -73,6 +73,39 @@ if (typeof window !== "undefined") {
   ;(window as any).clearADOComments = clearStoredBlocks
 }
 
+/**
+ * Función para obtener todos los bloques de todas las páginas desde localStorage
+ * Útil para calcular el progreso global de viabilización
+ */
+export function getAllBlocksFromStorage(): ContentBlock[] {
+  if (typeof window === "undefined") return []
+  
+  try {
+    const allBlocks: ContentBlock[] = []
+    
+    // Iterar sobre todas las claves de localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith("ado-blocks-")) {
+        const stored = localStorage.getItem(key)
+        if (stored) {
+          try {
+            const blocks = JSON.parse(stored) as ContentBlock[]
+            allBlocks.push(...blocks)
+          } catch (error) {
+            console.error(`Error al parsear bloques de ${key}:`, error)
+          }
+        }
+      }
+    }
+    
+    return allBlocks
+  } catch (error) {
+    console.error("Error al obtener todos los bloques:", error)
+    return []
+  }
+}
+
 export function useBlocks(initialBlocks: ContentBlock[]) {
   // Obtener la clave de almacenamiento única para esta página
   const storageKey = getStorageKey(initialBlocks)
@@ -113,6 +146,10 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
   // Guardar en localStorage cada vez que cambien los bloques
   useEffect(() => {
     saveStoredBlocks(storageKey, blocksState.blocks)
+    // Disparar evento personalizado para notificar cambios
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent('blocksUpdated'))
+    }
   }, [storageKey, blocksState.blocks])
 
   const setActiveBlock = useCallback((blockId: string) => {
@@ -129,6 +166,10 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
         blocks: prev.blocks.map((block) =>
           block.id === blockId ? { ...block, viabilizacionStatus: status } : block
         ),
+      }
+      // Disparar evento personalizado para notificar cambios
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent('blocksUpdated'))
       }
       return updated
     })

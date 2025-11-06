@@ -36,12 +36,6 @@ export default function Home() {
     updateBlockStatus,
     addMessageToBlock,
   } = useBlocks(initialBlocks)
-
-  // Calcular progreso de viabilización
-  const viabilizadosCount = blocks.filter(
-    (block) => block.viabilizacionStatus === "viabilizado"
-  ).length
-  const totalBlocks = blocks.length
   const sidebarItems = [
     { id: "antecedentes", label: "Antecedentes", active: true, href: "/" },
     { id: "actividades", label: "Actividades", badge: "3", href: "/actividades" },
@@ -133,9 +127,6 @@ export default function Home() {
         }
         backButtonText="Proyectos"
         onBack={() => router.push("/proyectos")}
-        federacionName="Atletismo"
-        viabilizadosCount={viabilizadosCount}
-        totalBlocks={totalBlocks}
         rightActions={
           <>
             <motion.div

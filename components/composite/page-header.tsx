@@ -1,8 +1,11 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, MessageSquare, MoreVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getAllBlocksFromStorage } from "@/prototype-logic/use-blocks"
+import type { ContentBlock } from "@/prototype-logic/types"
 
 interface PageHeaderProps {
   title: string | React.ReactNode
@@ -10,8 +13,6 @@ interface PageHeaderProps {
   onBack?: () => void
   rightActions?: React.ReactNode
   federacionName?: string
-  viabilizadosCount?: number
-  totalBlocks?: number
 }
 
 export function PageHeader({ 
@@ -19,13 +20,49 @@ export function PageHeader({
   backButtonText = "Proyectos",
   onBack,
   rightActions,
-  federacionName,
-  viabilizadosCount,
-  totalBlocks
+  federacionName = "Atletismo"
 }: PageHeaderProps) {
-  // Calcular el porcentaje de progreso
-  const progressPercentage = totalBlocks && totalBlocks > 0 
-    ? ((viabilizadosCount || 0) / totalBlocks) * 100 
+  // Obtener todos los bloques de todas las páginas para calcular el progreso global
+  const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([])
+
+  useEffect(() => {
+    // Función para obtener y actualizar todos los bloques
+    const updateAllBlocks = () => {
+      const blocks = getAllBlocksFromStorage()
+      setAllBlocks(blocks)
+    }
+
+    // Obtener bloques iniciales
+    updateAllBlocks()
+
+    // Escuchar cambios en localStorage
+    const handleStorageChange = () => {
+      updateAllBlocks()
+    }
+
+    // Escuchar el evento storage (cuando cambia localStorage)
+    window.addEventListener('storage', handleStorageChange)
+    
+    // También escuchar cambios personalizados (para cambios en la misma ventana)
+    window.addEventListener('blocksUpdated', handleStorageChange)
+
+    // Polling como fallback (cada 500ms)
+    const interval = setInterval(updateAllBlocks, 500)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('blocksUpdated', handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Calcular progreso global
+  const viabilizadosCount = allBlocks.filter(
+    (block) => block.viabilizacionStatus === "viabilizado"
+  ).length
+  const totalBlocks = allBlocks.length
+  const progressPercentage = totalBlocks > 0 
+    ? (viabilizadosCount / totalBlocks) * 100 
     : 0
 
   return (
@@ -57,7 +94,7 @@ export function PageHeader({
         </div>
       </div>
       {/* Barra de progreso */}
-      {totalBlocks !== undefined && totalBlocks > 0 && (
+      {totalBlocks > 0 && (
         <div className="flex flex-col gap-2 items-start shrink-0 w-[212px]">
           <p className="text-sm font-medium text-muted-foreground leading-5">
             Partes viabilizadas
