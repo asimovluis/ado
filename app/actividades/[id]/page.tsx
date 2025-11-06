@@ -80,8 +80,14 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
 
   // Handler para cuando se hace clic en el botón de comentarios de un card
   const handleCommentClick = (blockId: string) => {
-    setActiveBlock(blockId)
-    setIsChatPanelOpen(true)
+    const blockExists = blocks.some((block) => block.id === blockId)
+    if (blockExists) {
+      setActiveBlock(blockId)
+      // Usar setTimeout para asegurar que el estado se actualice antes de abrir el panel
+      setTimeout(() => {
+        setIsChatPanelOpen(true)
+      }, 0)
+    }
   }
 
   // Handler para enviar mensajes
@@ -779,7 +785,7 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
           </Tabs>
         </main>
         <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlock && (
+          {isChatPanelOpen && activeBlockId && activeBlock && (
             <ChatPanel
               viabilizacionStatus={activeBlock.viabilizacionStatus}
               onViabilizacionStatusChange={(status) => {

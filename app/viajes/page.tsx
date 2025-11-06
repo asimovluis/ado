@@ -153,8 +153,14 @@ export default function ViajesPage() {
   }))
 
   const handleCommentClick = (blockId: string) => {
-    setActiveBlock(blockId)
-    setIsChatPanelOpen(true)
+    const blockExists = blocks.some((block) => block.id === blockId)
+    if (blockExists) {
+      setActiveBlock(blockId)
+      // Usar setTimeout para asegurar que el estado se actualice antes de abrir el panel
+      setTimeout(() => {
+        setIsChatPanelOpen(true)
+      }, 0)
+    }
   }
 
   // Handler para enviar mensajes
@@ -298,7 +304,7 @@ export default function ViajesPage() {
           </div>
         </main>
         <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlock && (
+          {isChatPanelOpen && activeBlockId && activeBlock && (
             <ChatPanel
               viabilizacionStatus={activeBlock.viabilizacionStatus}
               onViabilizacionStatusChange={(status) => {
