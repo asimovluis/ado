@@ -154,11 +154,18 @@ export default function ViajesPage() {
 
   // Handler para cuando se hace clic en el botón de comentarios de un card
   const handleCommentClick = (blockId: string) => {
+    console.log("🔵 handleCommentClick - blockId:", blockId)
+    console.log("🔵 Available blocks:", blocks.map(b => b.id))
     const blockExists = blocks.some((block) => block.id === blockId)
+    console.log("🔵 Block exists:", blockExists)
+    
     if (blockExists) {
+      console.log("🔵 Setting active block to:", blockId)
       setActiveBlock(blockId)
-      // Abrir el panel inmediatamente
+      console.log("🔵 Opening chat panel")
       setIsChatPanelOpen(true)
+    } else {
+      console.error("❌ Block not found:", blockId)
     }
   }
 
@@ -251,15 +258,16 @@ export default function ViajesPage() {
                                   updateBlockStatus(travel.id, status)
                                 }}
                               />
-                              <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCommentClick(travel.id)
+                                }}
                               >
-                                <Button variant="ghost" size="icon" onClick={() => handleCommentClick(travel.id)}>
-                                  <MessageSquare className="size-5" />
-                                </Button>
-                              </motion.div>
+                                <MessageSquare className="size-5" />
+                              </Button>
                             </CardAction>
                           </div>
                         </div>

@@ -80,11 +80,19 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
 
   // Handler para cuando se hace clic en el botón de comentarios de un card
   const handleCommentClick = (blockId: string) => {
+    console.log("🔵 handleCommentClick - blockId:", blockId)
+    console.log("🔵 Available blocks:", blocks.map(b => b.id))
     const blockExists = blocks.some((block) => block.id === blockId)
+    console.log("🔵 Block exists:", blockExists)
+    
     if (blockExists) {
+      console.log("🔵 Setting active block to:", blockId)
       setActiveBlock(blockId)
-      // Abrir el panel inmediatamente
+      console.log("🔵 Opening chat panel")
       setIsChatPanelOpen(true)
+      console.log("🔵 isChatPanelOpen:", true, "activeBlockId will be:", blockId)
+    } else {
+      console.error("❌ Block not found:", blockId)
     }
   }
 
@@ -197,19 +205,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("sobre-actividad")}
                           onStatusChange={(status) => updateBlockStatus("sobre-actividad", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("sobre-actividad")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("sobre-actividad")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader>
                         <CardTitle className="text-lg font-bold leading-7">
@@ -364,19 +369,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("mujeres-deportistas")}
                           onStatusChange={(status) => updateBlockStatus("mujeres-deportistas", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("mujeres-deportistas")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("mujeres-deportistas")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader className="flex flex-row items-start gap-2">
                         <CheckCircle2 className="size-6 text-primary shrink-0 mt-0.5" />
@@ -396,19 +398,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("hombres-deportistas")}
                           onStatusChange={(status) => updateBlockStatus("hombres-deportistas", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("hombres-deportistas")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("hombres-deportistas")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader className="flex flex-row items-start gap-2">
                         <CheckCircle2 className="size-6 text-primary shrink-0 mt-0.5" />
@@ -498,19 +497,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("mujeres-tecnico-staff")}
                           onStatusChange={(status) => updateBlockStatus("mujeres-tecnico-staff", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("mujeres-tecnico-staff")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("mujeres-tecnico-staff")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader className="flex flex-row items-start gap-2">
                         <CheckCircle2 className="size-6 text-primary shrink-0 mt-0.5" />
@@ -605,19 +601,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("hombres-tecnico-staff")}
                           onStatusChange={(status) => updateBlockStatus("hombres-tecnico-staff", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("hombres-tecnico-staff")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("hombres-tecnico-staff")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader className="flex flex-row items-start gap-2">
                         <CheckCircle2 className="size-6 text-primary shrink-0 mt-0.5" />
@@ -646,19 +639,16 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
                           status={getBlockStatus("gastos")}
                           onStatusChange={(status) => updateBlockStatus("gastos", status)}
                         />
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("gastos")
+                          }}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleCommentClick("gastos")}
-                          >
-                            <MessageSquare className="size-5" />
-                          </Button>
-                        </motion.div>
+                          <MessageSquare className="size-5" />
+                        </Button>
                       </CardAction>
                       <CardHeader className="flex flex-row items-start gap-2">
                         <CheckCircle2 className="size-6 text-primary shrink-0 mt-0.5" />
@@ -783,7 +773,10 @@ export default function ActividadPage({ params }: { params: { id: string } }) {
           </Tabs>
         </main>
         <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlockId && (
+          {(() => {
+            console.log("🟢 Render check - isChatPanelOpen:", isChatPanelOpen, "activeBlockId:", activeBlockId, "activeBlock:", activeBlock)
+            return isChatPanelOpen && activeBlockId
+          })() && (
             <ChatPanel
               viabilizacionStatus={activeBlock?.viabilizacionStatus || "pendiente"}
               onViabilizacionStatusChange={(status) => {
