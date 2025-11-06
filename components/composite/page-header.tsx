@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MessageSquare, MoreVertical } from "lucide-react"
+import { ArrowLeft, MessageSquare, MoreVertical, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getAllBlocksFromStorage } from "@/prototype-logic/use-blocks"
 import type { ContentBlock } from "@/prototype-logic/types"
+import { ViabilizacionSummaryDialog } from "@/components/composite/viabilizacion-summary-dialog"
 
 interface PageHeaderProps {
   title: string | React.ReactNode
@@ -25,6 +26,7 @@ export function PageHeader({
   // Obtener todos los bloques de todas las páginas para calcular el progreso global
   const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([])
   const [isMounted, setIsMounted] = useState(false)
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
 
   useEffect(() => {
     // Marcar como montado para evitar errores de hidratación
@@ -118,7 +120,23 @@ export function PageHeader({
           </div>
         </div>
       )}
+      {/* Botón de info para mostrar el resumen */}
+      {isMounted && totalBlocks > 0 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0"
+          onClick={() => setIsSummaryDialogOpen(true)}
+        >
+          <Info className="size-5" />
+          <span className="sr-only">Ver resumen de viabilización</span>
+        </Button>
+      )}
       {rightActions}
+      <ViabilizacionSummaryDialog
+        open={isSummaryDialogOpen}
+        onOpenChange={setIsSummaryDialogOpen}
+      />
     </header>
   )
 }
