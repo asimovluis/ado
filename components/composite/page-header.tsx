@@ -66,11 +66,11 @@ export function PageHeader({
             <span className="text-sm font-medium text-foreground leading-5 whitespace-nowrap">
               {viabilizadosCount || 0}/{totalBlocks}
             </span>
-            <div className="basis-0 bg-secondary grow h-2 overflow-clip relative rounded-full">
+            <div className="basis-0 bg-secondary grow h-2 overflow-hidden relative rounded-full">
               <div 
-                className="absolute bg-[hsl(var(--teal-700))] h-4 left-0 top-1/2 -translate-y-1/2 rounded-full transition-all duration-300"
+                className="absolute bg-[hsl(var(--teal-700))] h-full left-0 top-0 rounded-full transition-all duration-300 ease-out"
                 style={{ 
-                  width: `${progressPercentage}%`,
+                  width: `${Math.max(0, Math.min(100, progressPercentage))}%`,
                 }}
               />
             </div>
