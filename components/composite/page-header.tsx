@@ -24,8 +24,12 @@ export function PageHeader({
 }: PageHeaderProps) {
   // Obtener todos los bloques de todas las páginas para calcular el progreso global
   const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([])
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    // Marcar como montado para evitar errores de hidratación
+    setIsMounted(true)
+    
     // Función para obtener y actualizar todos los bloques
     const updateAllBlocks = () => {
       const blocks = getAllBlocksFromStorage()
@@ -94,7 +98,7 @@ export function PageHeader({
         </div>
       </div>
       {/* Barra de progreso */}
-      {totalBlocks > 0 && (
+      {isMounted && totalBlocks > 0 && (
         <div className="flex flex-col gap-2 items-start shrink-0 w-[212px]">
           <p className="text-sm font-medium text-muted-foreground leading-5">
             Partes viabilizadas

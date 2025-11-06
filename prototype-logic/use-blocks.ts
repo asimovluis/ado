@@ -110,20 +110,23 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
   // Obtener la clave de almacenamiento única para esta página
   const storageKey = getStorageKey(initialBlocks)
   
-  // Intentar cargar desde localStorage al inicio
-  const [blocksState, setBlocksState] = useState<BlocksState>(() => {
+  // Inicializar siempre con los bloques iniciales (igual en servidor y cliente)
+  // Esto previene errores de hidratación
+  const [blocksState, setBlocksState] = useState<BlocksState>(() => ({
+    blocks: initialBlocks,
+    activeBlockId: initialBlocks[0]?.id || null,
+  }))
+
+  // Cargar desde localStorage solo en el cliente después del montaje
+  useEffect(() => {
     const storedBlocks = getStoredBlocks(storageKey)
-    
-    // Si hay datos guardados, fusionarlos con los iniciales
-    // Mantener los bloques guardados que coincidan con los iniciales, pero asegurar que todos los iniciales estén presentes
-    let blocksToUse: ContentBlock[]
     
     if (storedBlocks) {
       // Crear un mapa de bloques guardados por ID
       const storedBlocksMap = new Map(storedBlocks.map(b => [b.id, b]))
       
       // Para cada bloque inicial, usar el guardado si existe, o el inicial si no
-      blocksToUse = initialBlocks.map(initialBlock => {
+      const blocksToUse = initialBlocks.map(initialBlock => {
         const storedBlock = storedBlocksMap.get(initialBlock.id)
         if (storedBlock) {
           // Usar el bloque guardado (tiene mensajes y estado guardados)
@@ -132,16 +135,14 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
         // Usar el bloque inicial (nuevo o sin datos guardados)
         return initialBlock
       })
-    } else {
-      // No hay datos guardados, usar los iniciales
-      blocksToUse = initialBlocks
+      
+      setBlocksState({
+        blocks: blocksToUse,
+        activeBlockId: blocksToUse[0]?.id || null,
+      })
     }
-    
-    return {
-      blocks: blocksToUse,
-      activeBlockId: blocksToUse[0]?.id || null,
-    }
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]) // Solo ejecutar una vez al montar (initialBlocks no cambia)
 
   // Guardar en localStorage cada vez que cambien los bloques
   useEffect(() => {
