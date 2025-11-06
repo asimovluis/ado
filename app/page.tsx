@@ -16,7 +16,7 @@ import type { ContentBlock } from "@/prototype-logic/types"
 
 export default function Home() {
   const router = useRouter()
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(true)
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false)
 
   // Lógica de prototipado: bloques de contenido
   const initialBlocks: ContentBlock[] = [

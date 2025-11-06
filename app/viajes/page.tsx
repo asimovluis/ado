@@ -32,7 +32,7 @@ interface TravelCard {
 
 export default function ViajesPage() {
   const router = useRouter()
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(true)
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false)
 
   // Datos de ejemplo de viajes
   const travelCards: TravelCard[] = [

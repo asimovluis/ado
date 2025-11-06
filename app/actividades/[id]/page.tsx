@@ -20,7 +20,7 @@ import type { ContentBlock } from "@/prototype-logic/types"
 
 export default function ActividadPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(true)
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("actividad")
 
   // Lógica de prototipado: bloques de contenido independientes
