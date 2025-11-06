@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Circle } from "lucide-react"
+import { BadgeCheck, Check, CircleSlash } from "lucide-react"
 import { getAllBlocksFromStorage } from "@/prototype-logic/use-blocks"
 import { getBlockRoute } from "@/prototype-logic/block-navigation"
 import type { ContentBlock } from "@/prototype-logic/types"
@@ -99,7 +99,22 @@ export function ViabilizacionSummaryDialog({
             </p>
           ) : (
             allBlocks.map((block) => {
-              const isViabilizado = block.viabilizacionStatus === "viabilizado"
+              const status = block.viabilizacionStatus
+              
+              // Determinar el icono y color según el estado
+              let IconComponent
+              let iconClassName
+              
+              if (status === "viabilizado") {
+                IconComponent = BadgeCheck
+                iconClassName = "text-[var(--teal-700)]"
+              } else if (status === "pre-viabilizado") {
+                IconComponent = Check
+                iconClassName = "text-[var(--teal-700)]"
+              } else {
+                IconComponent = CircleSlash
+                iconClassName = "text-muted-foreground"
+              }
               
               return (
                 <button
@@ -110,11 +125,7 @@ export function ViabilizacionSummaryDialog({
                     "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  {isViabilizado ? (
-                    <CheckCircle2 className="size-6 shrink-0 text-[var(--teal-700)] mt-0.5" />
-                  ) : (
-                    <Circle className="size-6 shrink-0 text-muted-foreground mt-0.5" />
-                  )}
+                  <IconComponent className={cn("size-6 shrink-0 mt-0.5", iconClassName)} />
                   <span className="text-base font-medium text-foreground leading-6">
                     {block.title}
                   </span>

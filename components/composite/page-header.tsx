@@ -99,38 +99,39 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {/* Barra de progreso */}
+      {/* Botón de info y barra de progreso */}
       {isMounted && totalBlocks > 0 && (
-        <div className="flex flex-col gap-2 items-start shrink-0 w-[212px]">
-          <p className="text-sm font-medium text-muted-foreground leading-5">
-            Partes viabilizadas
-          </p>
-          <div className="flex gap-2 items-center w-full">
-            <span className="text-sm font-medium text-foreground leading-5 whitespace-nowrap">
-              {viabilizadosCount || 0}/{totalBlocks}
-            </span>
-            <div className="basis-0 bg-secondary grow h-2 overflow-hidden relative rounded-full">
-              <div 
-                className="absolute bg-[var(--teal-700)] h-full left-0 top-0 rounded-full transition-all duration-300 ease-out"
-                style={{ 
-                  width: `${Math.max(0, Math.min(100, progressPercentage))}%`,
-                }}
-              />
+        <>
+          {/* Botón de info para mostrar el resumen */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => setIsSummaryDialogOpen(true)}
+          >
+            <Info className="size-5" />
+            <span className="sr-only">Ver resumen de viabilización</span>
+          </Button>
+          {/* Barra de progreso */}
+          <div className="flex flex-col gap-2 items-start shrink-0 w-[212px]">
+            <p className="text-sm font-medium text-muted-foreground leading-5">
+              Partes viabilizadas
+            </p>
+            <div className="flex gap-2 items-center w-full">
+              <span className="text-sm font-medium text-foreground leading-5 whitespace-nowrap">
+                {viabilizadosCount || 0}/{totalBlocks}
+              </span>
+              <div className="basis-0 bg-secondary grow h-2 overflow-hidden relative rounded-full">
+                <div 
+                  className="absolute bg-[var(--teal-700)] h-full left-0 top-0 rounded-full transition-all duration-300 ease-out"
+                  style={{ 
+                    width: `${Math.max(0, Math.min(100, progressPercentage))}%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      {/* Botón de info para mostrar el resumen */}
-      {isMounted && totalBlocks > 0 && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          onClick={() => setIsSummaryDialogOpen(true)}
-        >
-          <Info className="size-5" />
-          <span className="sr-only">Ver resumen de viabilización</span>
-        </Button>
+        </>
       )}
       {rightActions}
       <ViabilizacionSummaryDialog
