@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { MoreVertical, Send, Edit, FileText, CheckCircle2, XOctagon } from "lucide-react"
+import { MoreVertical, Send, Edit, FileText, CheckCircle2, XOctagon, BadgeCheck } from "lucide-react"
 import { ViabilizacionFormDialog, type ViabilizacionFormData } from "@/components/composite/viabilizacion-form-dialog"
 import { cn } from "@/lib/utils"
+import { BENEFICIARIOS } from "@/lib/beneficiarios"
 
 const STORAGE_KEY = "ado-viabilizacion-data"
 
@@ -134,14 +135,14 @@ export default function ViabilizacionPage() {
                       </div>
                       <div className="flex flex-col gap-2">
                         <h3 className="text-lg font-semibold text-foreground">
-                          No hay información de viabilización
+                          Formulario de viabilización
                         </h3>
                         <p className="text-sm text-muted-foreground max-w-md">
-                          Completa el formulario de viabilización técnica de la actividad para continuar.
+                          Completa el formulario de viabilización técnica de la actividad
                         </p>
                       </div>
                       <Button onClick={() => setIsDialogOpen(true)} className="mt-2">
-                        Llenar formulario de viabilización
+                        Completar formulario
                       </Button>
                     </div>
                   </CardContent>
@@ -257,6 +258,68 @@ export default function ViabilizacionPage() {
                           ? "Ajustado con jefatura"
                           : "No especificado"}
                       </p>
+                    </div>
+
+                    {/* Beneficiarios a viabilizar */}
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Beneficiarios a viabilizar
+                      </p>
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-b hover:bg-transparent">
+                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap w-[48px]">
+                              </TableHead>
+                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                Nombre y modalidad
+                              </TableHead>
+                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[96px]">
+                                Nacionalidad
+                              </TableHead>
+                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[120px]">
+                                Documento
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {BENEFICIARIOS.map((beneficiario) => {
+                              const isSelected = formData.beneficiariosSeleccionados.includes(beneficiario.name)
+                              return (
+                                <TableRow key={beneficiario.name} className="border-b hover:bg-transparent">
+                                  <TableCell className="p-3 min-h-[60px]">
+                                    {isSelected ? (
+                                      <BadgeCheck className="size-6 text-[var(--teal-700)]" />
+                                    ) : (
+                                      <XOctagon className="size-6 text-destructive" />
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[60px] whitespace-normal">
+                                    <div className="flex flex-col gap-1">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {beneficiario.name}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground leading-5">
+                                        {beneficiario.modality}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[60px] whitespace-normal">
+                                    <p className="text-sm text-foreground leading-5">
+                                      {beneficiario.nationality}
+                                    </p>
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[60px] whitespace-normal">
+                                    <p className="text-sm text-foreground leading-5">
+                                      {beneficiario.doc}
+                                    </p>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
 
                     {/* Observaciones */}

@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { BadgeCheck, XOctagon } from "lucide-react"
+import { BadgeCheck, XOctagon, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BENEFICIARIOS, type Beneficiario } from "@/lib/beneficiarios"
 
 export interface ViabilizacionFormData {
   viabilizaTecnicamente: "si" | "no" | null
@@ -298,6 +299,97 @@ export function ViabilizacionFormDialog({
                 </label>
               ))}
             </RadioGroup>
+          </div>
+
+          {/* Beneficiarios */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <label className="text-base font-medium text-foreground">
+                Seleciona los beneficiarios a viabilizar
+              </label>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={
+                    formData.beneficiariosSeleccionados.length === BENEFICIARIOS.length
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setFormData({
+                        ...formData,
+                        beneficiariosSeleccionados: BENEFICIARIOS.map((b) => b.name),
+                      })
+                    } else {
+                      setFormData({
+                        ...formData,
+                        beneficiariosSeleccionados: [],
+                      })
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium text-foreground">
+                  Seleccionar todos
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-1 items-start">
+              <AlertTriangle className="size-6 text-orange-600 shrink-0 mt-0.5" />
+              <p className="text-base font-medium text-foreground">
+                Solo serán viabilizados los beneficiarios seleccionados
+              </p>
+            </div>
+            <div className="flex flex-col gap-1 border border-border rounded-lg overflow-hidden">
+              {BENEFICIARIOS.map((beneficiario) => (
+                <label
+                  key={beneficiario.name}
+                  className={cn(
+                    "flex gap-2 items-center p-3 border-b border-border last:border-b-0 cursor-pointer transition-colors",
+                    formData.beneficiariosSeleccionados.includes(beneficiario.name)
+                      ? "bg-accent"
+                      : "bg-popover"
+                  )}
+                >
+                  <div className="flex flex-col gap-1 grow min-w-0">
+                    <span className="text-sm font-medium text-foreground">
+                      {beneficiario.name}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {beneficiario.modality}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="text-sm text-foreground w-20 text-right">
+                      {beneficiario.nationality}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="text-sm text-foreground w-24">
+                      {beneficiario.doc}
+                    </span>
+                  </div>
+                  <Checkbox
+                    checked={formData.beneficiariosSeleccionados.includes(beneficiario.name)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setFormData({
+                          ...formData,
+                          beneficiariosSeleccionados: [
+                            ...formData.beneficiariosSeleccionados,
+                            beneficiario.name,
+                          ],
+                        })
+                      } else {
+                        setFormData({
+                          ...formData,
+                          beneficiariosSeleccionados: formData.beneficiariosSeleccionados.filter(
+                            (name) => name !== beneficiario.name
+                          ),
+                        })
+                      }
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Observaciones */}
