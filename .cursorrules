@@ -22,6 +22,9 @@ Construir un front-end **escalable, limpio y consistente**, mapeando diseños de
 5. **Accesible por defecto:** respetar Radix/ARIA, `focus-visible`, `disabled`, `dark mode`.  
 6. **Match con Figma:** buscar token exacto o el más cercano; si no existe, proponerlo en el PR (no hardcodear).
 7. **Componentes agnosticos a caso de uso** Los componentes que sean reutilizables, hazlos agnósticos al caso de uso, con una capa de abstracción para que puedan ser usados en distintos casos y contenidos con flexibilidad.
+8. **Nada de lógica de dominio hardcodeada en componentes compartidos:** layouts y componentes como `Sidebar`, `Navbar`, `PageShell`, etc. **no** deben traer rutas, labels ni reglas específicas de una sola pantalla. Deben recibir:
+   - un arreglo de items (`items: { label, icon, href, key }[]`) o similar, pasado desde la página/layout;
+   - cualquier lógica condicional (permisos, estados, selección de ruta) definida fuera y entregada vía props.
 
 ---
 
