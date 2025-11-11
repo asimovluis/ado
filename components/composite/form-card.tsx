@@ -49,7 +49,7 @@ export function FormCard({
                 </CardTitle>
               </div>
               <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                {viabilizacionStatus && onViabilizacionStatusChange && (
+                {false && viabilizacionStatus && onViabilizacionStatusChange && (
                   <ViabilizacionStatusSelector
                     status={viabilizacionStatus}
                     onStatusChange={onViabilizacionStatusChange}
@@ -96,7 +96,7 @@ export function FormCard({
         </CardContent>
         {/* Sección de botones al final del card */}
         <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-          {viabilizacionStatus && onViabilizacionStatusChange && (
+          {false && viabilizacionStatus && onViabilizacionStatusChange && (
             <ViabilizacionStatusSelector
               status={viabilizacionStatus}
               onStatusChange={onViabilizacionStatusChange}

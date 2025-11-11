@@ -99,8 +99,8 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {/* Botón de info y barra de progreso */}
-      {isMounted && totalBlocks > 0 && (
+      {/* Botón de info y barra de progreso - OCULTO TEMPORALMENTE */}
+      {false && isMounted && totalBlocks > 0 && (
         <>
           {/* Botón de info para mostrar el resumen */}
           <Button

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
 import { SidebarNav } from "@/components/composite/sidebar-nav"
@@ -10,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/componen
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ViabilizacionStatusSelector } from "@/components/composite/viabilizacion-status-selector"
 import { ItineraryTimeline } from "@/components/composite/itinerary-timeline"
 import { MessageSquare, MoreVertical, Send } from "lucide-react"
 import { useBlocks } from "@/prototype-logic/use-blocks"
@@ -177,14 +177,13 @@ export default function ViajesPage() {
     }
   }
 
-  const getBlockStatus = (blockId: string) => {
-    return blocks.find((block) => block.id === blockId)?.viabilizacionStatus || "pendiente"
-  }
-
+  const pathname = usePathname()
   const sidebarItems = [
-    { id: "antecedentes", label: "Antecedentes", href: "/" },
-    { id: "actividades", label: "Actividades", badge: 3, href: "/actividades" },
-    { id: "viajes", label: "Viajes", active: true, badge: 3, href: "/viajes" },
+    { id: "sobre-actividad", label: "Sobre la actividad", active: pathname === "/sobre-actividad", href: "/sobre-actividad" },
+    { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
+    { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
+    { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
+    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
   ]
 
   return (
@@ -252,12 +251,6 @@ export default function ViajesPage() {
                               </CardTitle>
                             </div>
                             <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                              <ViabilizacionStatusSelector
-                                status={getBlockStatus(travel.id)}
-                                onStatusChange={(status) => {
-                                  updateBlockStatus(travel.id, status)
-                                }}
-                              />
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -305,12 +298,6 @@ export default function ViajesPage() {
                       </CardContent>
                       {/* Sección de botones al final del card */}
                       <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-                        <ViabilizacionStatusSelector
-                          status={getBlockStatus(travel.id)}
-                          onStatusChange={(status) => {
-                            updateBlockStatus(travel.id, status)
-                          }}
-                        />
                         <Button
                           variant="ghost"
                           className="gap-1.5 h-9 px-4"
@@ -333,12 +320,6 @@ export default function ViajesPage() {
         <AnimatePresence mode="wait">
           {isChatPanelOpen && activeBlockId && (
             <ChatPanel
-              viabilizacionStatus={activeBlock?.viabilizacionStatus || "pendiente"}
-              onViabilizacionStatusChange={(status) => {
-                if (activeBlockId) {
-                  updateBlockStatus(activeBlockId, status)
-                }
-              }}
               messages={activeBlock?.messages || []}
               onClose={() => setIsChatPanelOpen(false)}
               onSend={handleSendMessage}

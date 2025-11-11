@@ -95,7 +95,7 @@ export function ChatPanel({
             className="w-full"
           />
         )}
-        {viabilizacionStatus && onViabilizacionStatusChange && (
+        {false && viabilizacionStatus && onViabilizacionStatusChange && (
           <div className="w-fit">
             <ViabilizacionStatusSelector
               status={viabilizacionStatus}
