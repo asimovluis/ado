@@ -116,7 +116,7 @@ export function ViabilizacionFormDialog({
           <DialogTitle>Viabilización técnica de la actividad</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-10">
           {/* ¿Se viabiliza técnicamente? */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
@@ -166,7 +166,7 @@ export function ViabilizacionFormDialog({
 
           {/* Tipo de producto viabilizado */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
+            <label className="text-md font-semibold text-foreground">
               Tipo de producto viabilizado
             </label>
             <div className="flex flex-col gap-1">
@@ -206,7 +206,7 @@ export function ViabilizacionFormDialog({
 
           {/* Necesidades */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
+            <label className="text-md font-semibold text-foreground">
               Necesidades para la ejecución de la actividad
             </label>
             <div className="flex flex-col gap-1">
@@ -268,7 +268,7 @@ export function ViabilizacionFormDialog({
 
           {/* Rango de presupuesto */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
+            <label className="text-md font-semibold text-foreground">
               Rango de presupuesto aprobado
             </label>
             <RadioGroup
