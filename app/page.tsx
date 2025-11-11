@@ -24,7 +24,7 @@ export default function Home() {
     {
       id: "antecedentes",
       title: "Antecedentes del proyecto",
-      viabilizacionStatus: "pendiente",
+      viabilizacionStatus: null,
       messages: [], // Inicializar con historial limpio
     },
   ]
@@ -35,6 +35,7 @@ export default function Home() {
     activeBlockId,
     setActiveBlock,
     addMessageToBlock,
+    updateBlockStatus,
   } = useBlocks(initialBlocks)
   const pathname = usePathname()
   const sidebarItems = [
@@ -42,7 +43,7 @@ export default function Home() {
     { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
     { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
     { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
-    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
+    { id: "observaciones-generales", label: "Observaciones generales", active: pathname === "/observaciones-generales", href: "/observaciones-generales" },
   ]
 
   const antecedentesGeneralesFields = [
@@ -171,6 +172,8 @@ export default function Home() {
                   title={block.title}
                   fields={antecedentesGeneralesFields}
                   onComment={handleCommentClick}
+                  viabilizacionStatus={block.viabilizacionStatus}
+                  onViabilizacionStatusChange={(status) => updateBlockStatus(block.id, status)}
                 />
               ))}
             </div>

@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { BadgeCheck, Check, CircleSlash } from "lucide-react"
+import { BadgeCheck, Check, XOctagon } from "lucide-react"
 import { getAllBlocksFromStorage } from "@/prototype-logic/use-blocks"
 import { getBlockRoute } from "@/prototype-logic/block-navigation"
 import type { ContentBlock } from "@/prototype-logic/types"
@@ -111,9 +111,13 @@ export function ViabilizacionSummaryDialog({
               } else if (status === "pre-viabilizado") {
                 IconComponent = Check
                 iconClassName = "text-[var(--teal-700)]"
+              } else if (status === "no-viabilizado") {
+                IconComponent = XOctagon
+                iconClassName = "text-destructive"
               } else {
-                IconComponent = CircleSlash
-                iconClassName = "text-muted-foreground"
+                // null - sin estado (default)
+                IconComponent = null
+                iconClassName = ""
               }
               
               return (
@@ -125,7 +129,9 @@ export function ViabilizacionSummaryDialog({
                     "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  <IconComponent className={cn("size-6 shrink-0 mt-0.5", iconClassName)} />
+                  {IconComponent && (
+                    <IconComponent className={cn("size-6 shrink-0 mt-0.5", iconClassName)} />
+                  )}
                   <span className="text-base font-medium text-foreground leading-6">
                     {block.title}
                   </span>

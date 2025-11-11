@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
 import { BENEFICIARIOS } from "@/lib/beneficiarios"
+import { ViabilizacionStatusSelector, type ViabilizacionStatus } from "@/components/composite/viabilizacion-status-selector"
+import { getBeneficiariosViabilizacion, saveBeneficiarioViabilizacion } from "@/lib/beneficiarios-viabilizacion"
 import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
 import { SidebarNav } from "@/components/composite/sidebar-nav"
@@ -16,25 +18,28 @@ import { MessageSquare, MoreVertical, Send } from "lucide-react"
 import { useBlocks } from "@/prototype-logic/use-blocks"
 import { createUserMessage } from "@/prototype-logic/message-helpers"
 import type { ContentBlock } from "@/prototype-logic/types"
+import { cn } from "@/lib/utils"
 
 export default function BeneficiariosPage() {
   const router = useRouter()
   const pathname = usePathname()
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [beneficiariosViabilizacion, setBeneficiariosViabilizacion] = useState<Record<string, ViabilizacionStatus>>({})
 
   const sidebarItems = [
     { id: "sobre-actividad", label: "Sobre la actividad", active: pathname === "/sobre-actividad", href: "/sobre-actividad" },
     { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
     { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
     { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
-    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
+    { id: "observaciones-generales", label: "Observaciones generales", active: pathname === "/observaciones-generales", href: "/observaciones-generales" },
   ]
 
   const initialBlocks: ContentBlock[] = [
     {
       id: "beneficiarios",
       title: "Beneficiarios",
-      viabilizacionStatus: "pendiente",
+      viabilizacionStatus: null,
       messages: [],
     },
   ]
@@ -45,6 +50,7 @@ export default function BeneficiariosPage() {
     activeBlockId,
     setActiveBlock,
     addMessageToBlock,
+    updateBlockStatus,
   } = useBlocks(initialBlocks)
 
   const blockOptions = blocks.map((block) => ({
@@ -66,6 +72,24 @@ export default function BeneficiariosPage() {
 
   // Usar la constante compartida de beneficiarios
   const beneficiarios = BENEFICIARIOS
+
+  // Cargar estados de viabilización de beneficiarios
+  useEffect(() => {
+    setIsMounted(true)
+    const stored = getBeneficiariosViabilizacion()
+    setBeneficiariosViabilizacion(stored)
+  }, [])
+
+  const handleBeneficiarioViabilizacionChange = (beneficiarioName: string, status: ViabilizacionStatus) => {
+    saveBeneficiarioViabilizacion(beneficiarioName, status)
+    setBeneficiariosViabilizacion((prev) => {
+      if (status === null) {
+        const { [beneficiarioName]: _, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [beneficiarioName]: status }
+    })
+  }
 
   return (
     <div className="flex h-screen w-full flex-col">
@@ -112,7 +136,13 @@ export default function BeneficiariosPage() {
               </h2>
             </div>
             <div className="flex flex-col gap-3 items-center w-full">
-              <Card className="relative gap-6 w-full max-w-[920px]">
+              <Card className={cn(
+                "relative gap-6 w-full max-w-[920px]",
+                blocks[0]?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
+                blocks[0]?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
+                blocks[0]?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
+                ""
+              )}>
                 <CardHeader>
                   <div className="flex items-start gap-2">
                     <div className="flex flex-col gap-2 grow min-w-0">
@@ -174,30 +204,44 @@ export default function BeneficiariosPage() {
                       <TableBody>
                         {beneficiarios.map((row, idx) => (
                           <TableRow key={idx} className="border-b hover:bg-transparent">
-                            <TableCell className="p-3 min-h-[60px] whitespace-normal">
-                              <p className="text-sm text-foreground leading-5">
-                                {row.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground leading-5">
-                                {row.modality}
-                              </p>
+                            <TableCell className="p-3 align-top whitespace-normal">
+                              <div className="flex flex-col gap-2">
+                                <div>
+                                  <p className="text-sm text-foreground leading-5">
+                                    {row.name}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground leading-5">
+                                    {row.modality}
+                                  </p>
+                                </div>
+                                {isMounted && (
+                                  <div className="pt-1">
+                                    <ViabilizacionStatusSelector
+                                      status={beneficiariosViabilizacion[row.name] || null}
+                                      onStatusChange={(status) => handleBeneficiarioViabilizacionChange(row.name, status)}
+                                      hidePreViabilizado
+                                      hideLabels
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.gender}
                               </p>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.role}
                               </p>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.nationality}
                               </p>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.doc}
                               </p>
@@ -205,12 +249,12 @@ export default function BeneficiariosPage() {
                                 {row.docType}
                               </p>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.birthDate}
                               </p>
                             </TableCell>
-                            <TableCell className="p-3 whitespace-normal">
+                            <TableCell className="p-3 align-top whitespace-normal">
                               <p className="text-sm text-foreground leading-5">
                                 {row.phone}
                               </p>

@@ -1,52 +1,47 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { 
-  CircleSlash, 
   Check, 
-  BadgeCheck, 
-  ChevronDown 
+  BadgeCheck,
+  XOctagon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type ViabilizacionStatus = "pendiente" | "pre-viabilizado" | "viabilizado"
+export type ViabilizacionStatus = "pre-viabilizado" | "viabilizado" | "no-viabilizado" | null
 
 interface ViabilizacionStatusSelectorProps {
   status: ViabilizacionStatus
   onStatusChange: (status: ViabilizacionStatus) => void
   className?: string
+  hidePreViabilizado?: boolean
+  hideLabels?: boolean
 }
 
 const statusConfig = {
-  pendiente: {
-    label: "Pendiente",
-    description: "Aún no está listo",
-    icon: CircleSlash,
-    bgClass: "bg-background border border-border",
-    textClass: "text-accent-foreground",
-    iconClass: "text-foreground",
+  viabilizado: {
+    label: "Viabilizar",
+    labelSelected: "Viabilizado",
+    icon: BadgeCheck,
+    selectedClass: "bg-[var(--teal-700)] border-[var(--teal-700)] text-primary-foreground",
+    unselectedClass: "bg-background border-border text-foreground hover:bg-accent",
+    iconClass: "text-primary-foreground",
   },
   "pre-viabilizado": {
-    label: "Pre-viabilizado",
-    description: "Se puede avanzar, pero falta detallar más información",
+    label: "Pre viabilizar",
+    labelSelected: "Pre viabilizado",
     icon: Check,
-    bgClass: "bg-background border border-border",
-    textClass: "text-[var(--teal-700)]",
+    selectedClass: "bg-teal-100 border-[var(--teal-700)] text-foreground",
+    unselectedClass: "bg-background border-border text-foreground hover:bg-accent",
     iconClass: "text-[var(--teal-700)]",
   },
-  viabilizado: {
-    label: "Viabilizado",
-    description: "Está listo",
-    icon: BadgeCheck,
-    bgClass: "bg-[var(--teal-700)]",
-    textClass: "text-primary-foreground",
-    iconClass: "text-primary-foreground",
+  "no-viabilizado": {
+    label: "No viabilizar",
+    labelSelected: "No viabilizado",
+    icon: XOctagon,
+    selectedClass: "bg-amber-50 border-amber-500 text-foreground",
+    unselectedClass: "bg-background border-border text-foreground hover:bg-accent",
+    iconClass: "text-amber-600",
   },
 } as const
 
@@ -54,73 +49,53 @@ export function ViabilizacionStatusSelector({
   status,
   onStatusChange,
   className,
+  hidePreViabilizado = false,
+  hideLabels = false,
 }: ViabilizacionStatusSelectorProps) {
-  const [open, setOpen] = useState(false)
-  const config = statusConfig[status]
-  const Icon = config.icon
-
-  const handleSelect = (newStatus: ViabilizacionStatus) => {
-    onStatusChange(newStatus)
-    setOpen(false)
+  const handleToggle = (statusOption: "pre-viabilizado" | "viabilizado" | "no-viabilizado") => {
+    // Si el botón ya está seleccionado, deseleccionarlo (volver a null)
+    if (status === statusOption) {
+      onStatusChange(null)
+    } else {
+      // Si no está seleccionado, seleccionarlo
+      onStatusChange(statusOption)
+    }
   }
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant={status === "viabilizado" ? "default" : "outline"}
-          className={cn(
-            "h-8 gap-1.5 px-3",
-            status === "viabilizado" ? "bg-[var(--teal-700)] hover:bg-[var(--teal-700)]/90 border-0" : config.bgClass,
-            config.textClass,
-            "hover:opacity-90",
-            className
-          )}
-        >
-          <Icon className={cn("size-5", config.iconClass)} />
-          <span className="text-sm font-medium">{config.label}</span>
-          <ChevronDown className={cn("size-5", config.iconClass)} />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-1" align="start">
-        <div className="flex flex-col gap-1">
-          {(Object.keys(statusConfig) as ViabilizacionStatus[]).map((statusOption) => {
-            const optionConfig = statusConfig[statusOption]
-            const OptionIcon = optionConfig.icon
-            const isSelected = status === statusOption
+  const statusOptions: Array<"pre-viabilizado" | "viabilizado" | "no-viabilizado"> = 
+    hidePreViabilizado 
+      ? ["viabilizado", "no-viabilizado"]
+      : ["viabilizado", "pre-viabilizado", "no-viabilizado"]
 
-            return (
-              <button
-                key={statusOption}
-                onClick={() => handleSelect(statusOption)}
-                className={cn(
-                  "flex items-start gap-2 rounded-md px-3 py-2 text-left transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  isSelected && "bg-accent text-accent-foreground"
-                )}
-              >
-                <OptionIcon
-                  className={cn(
-                    "size-5 shrink-0 mt-0.5",
-                    statusOption === "pre-viabilizado"
-                      ? "text-[var(--teal-700)]"
-                      : statusOption === "viabilizado"
-                      ? "text-[var(--teal-700)]"
-                      : "text-foreground"
-                  )}
-                />
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-sm font-medium">{optionConfig.label}</span>
-                  <span className="text-xs text-muted-foreground leading-4">
-                    {optionConfig.description}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+  return (
+    <div className={cn("flex gap-1", className)}>
+      {statusOptions.map((statusOption) => {
+        const config = statusConfig[statusOption]
+        const Icon = config.icon
+        const isSelected = status === statusOption
+        const displayLabel = isSelected ? config.labelSelected : config.label
+
+        return (
+          <Button
+            key={statusOption}
+            type="button"
+            variant="outline"
+            onClick={() => handleToggle(statusOption)}
+            className={cn(
+              "h-8 border-2 transition-colors",
+              hideLabels ? "gap-0 px-2 w-8" : "gap-1.5 px-3 w-[140px]",
+              isSelected ? config.selectedClass : config.unselectedClass,
+              "hover:opacity-90"
+            )}
+          >
+            <Icon className={cn("size-4", isSelected ? config.iconClass : "text-foreground")} />
+            {!hideLabels && (
+              <span className="text-sm font-medium">{displayLabel}</span>
+            )}
+          </Button>
+        )
+      })}
+    </div>
   )
 }
 

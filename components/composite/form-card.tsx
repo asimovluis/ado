@@ -33,13 +33,41 @@ export function FormCard({
   onComment,
   className 
 }: FormCardProps) {
+  // Determinar el color de fondo según el estado de viabilización
+  const getBackgroundColor = () => {
+    if (viabilizacionStatus === "viabilizado") {
+      return "bg-green-100"
+    } else if (viabilizacionStatus === "pre-viabilizado") {
+      return "bg-cyan-50"
+    } else if (viabilizacionStatus === "no-viabilizado") {
+      return "bg-orange-50"
+    }
+    return ""
+  }
+
+  const getShadowColor = () => {
+    if (viabilizacionStatus === "viabilizado") {
+      return "shadow-[0_2px_8px_rgba(34,197,94,0.1)]"
+    } else if (viabilizacionStatus === "pre-viabilizado") {
+      return "shadow-[0_2px_8px_rgba(103,232,249,0.1)]"
+    } else if (viabilizacionStatus === "no-viabilizado") {
+      return "shadow-[0_2px_8px_rgba(251,146,60,0.1)]"
+    }
+    return ""
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
     >
-      <Card className={cn("relative gap-6 w-[600px]", className)}>
+      <Card className={cn(
+        "relative gap-6 w-[600px]",
+        getBackgroundColor(),
+        getShadowColor(),
+        className
+      )}>
         <CardHeader>
           <div className="flex flex-col gap-2">
             <div className="flex items-start gap-2">
@@ -49,12 +77,6 @@ export function FormCard({
                 </CardTitle>
               </div>
               <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                {false && viabilizacionStatus && onViabilizacionStatusChange && (
-                  <ViabilizacionStatusSelector
-                    status={viabilizacionStatus || "pendiente"}
-                    onStatusChange={onViabilizacionStatusChange || (() => {})}
-                  />
-                )}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -96,10 +118,10 @@ export function FormCard({
         </CardContent>
         {/* Sección de botones al final del card */}
         <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-          {false && viabilizacionStatus && onViabilizacionStatusChange && (
+          {onViabilizacionStatusChange && (
             <ViabilizacionStatusSelector
-              status={viabilizacionStatus || "pendiente"}
-              onStatusChange={onViabilizacionStatusChange || (() => {})}
+              status={viabilizacionStatus || null}
+              onStatusChange={onViabilizacionStatusChange}
             />
           )}
           <Button

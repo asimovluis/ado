@@ -12,9 +12,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { MessageSquare, MoreVertical, Send } from "lucide-react"
+import { ViabilizacionStatusSelector } from "@/components/composite/viabilizacion-status-selector"
 import { useBlocks } from "@/prototype-logic/use-blocks"
 import { createUserMessage } from "@/prototype-logic/message-helpers"
 import type { ContentBlock } from "@/prototype-logic/types"
+import { cn } from "@/lib/utils"
 
 export default function GastosPage() {
   const router = useRouter()
@@ -26,14 +28,14 @@ export default function GastosPage() {
     { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
     { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
     { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
-    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
+    { id: "observaciones-generales", label: "Observaciones generales", active: pathname === "/observaciones-generales", href: "/observaciones-generales" },
   ]
 
   const initialBlocks: ContentBlock[] = [
     {
       id: "gastos",
       title: "Gastos",
-      viabilizacionStatus: "pendiente",
+      viabilizacionStatus: null,
       messages: [],
     },
   ]
@@ -44,6 +46,7 @@ export default function GastosPage() {
     activeBlockId,
     setActiveBlock,
     addMessageToBlock,
+    updateBlockStatus,
   } = useBlocks(initialBlocks)
 
   const blockOptions = blocks.map((block) => ({
@@ -108,7 +111,13 @@ export default function GastosPage() {
               </h2>
             </div>
             <div className="flex flex-col gap-3 items-center w-full">
-              <Card className="relative gap-6 w-full max-w-[920px]">
+              <Card className={cn(
+                "relative gap-6 w-full max-w-[920px]",
+                blocks[0]?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
+                blocks[0]?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
+                blocks[0]?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
+                ""
+              )}>
                 <CardHeader>
                   <div className="flex items-start gap-2">
                     <div className="flex flex-col gap-2 grow min-w-0">
@@ -246,7 +255,13 @@ export default function GastosPage() {
                   </div>
                 </CardContent>
                 {/* Sección de botones al final del card */}
-                <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
+                <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                  {blocks[0] && (
+                    <ViabilizacionStatusSelector
+                      status={blocks[0].viabilizacionStatus || null}
+                      onStatusChange={(status) => updateBlockStatus(blocks[0].id, status)}
+                    />
+                  )}
                   <Button
                     variant="ghost"
                     className="gap-1.5 h-9 px-4"

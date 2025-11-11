@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { X, Paperclip, Send, Link as LinkIcon } from "lucide-react"
-import { ViabilizacionStatusSelector, type ViabilizacionStatus } from "@/components/composite/viabilizacion-status-selector"
 import { BlockSelector, type BlockOption } from "@/components/composite/block-selector"
 import { cn } from "@/lib/utils"
 
@@ -21,8 +20,6 @@ interface ChatMessage {
 
 interface ChatPanelProps {
   title?: string
-  viabilizacionStatus?: ViabilizacionStatus
-  onViabilizacionStatusChange?: (status: ViabilizacionStatus) => void
   messages: ChatMessage[]
   onClose?: () => void
   onSend?: (message: string) => void
@@ -35,8 +32,6 @@ interface ChatPanelProps {
 
 export function ChatPanel({ 
   title,
-  viabilizacionStatus,
-  onViabilizacionStatusChange,
   messages, 
   onClose, 
   onSend,
@@ -94,14 +89,6 @@ export function ChatPanel({
             onSelect={onBlockSelect}
             className="w-full"
           />
-        )}
-        {false && viabilizacionStatus && onViabilizacionStatusChange && (
-          <div className="w-fit">
-            <ViabilizacionStatusSelector
-              status={viabilizacionStatus || "pendiente"}
-              onStatusChange={onViabilizacionStatusChange || (() => {})}
-            />
-          </div>
         )}
       </div>
       <div className="bg-sidebar flex flex-col grow min-h-0 overflow-y-auto p-2">

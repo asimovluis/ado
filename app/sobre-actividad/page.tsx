@@ -25,14 +25,14 @@ export default function SobreActividadPage() {
     { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
     { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
     { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
-    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
+    { id: "observaciones-generales", label: "Observaciones generales", active: pathname === "/observaciones-generales", href: "/observaciones-generales" },
   ]
 
   const initialBlocks: ContentBlock[] = [
     {
       id: "sobre-actividad",
       title: "Sobre la actividad",
-      viabilizacionStatus: "pendiente",
+      viabilizacionStatus: null,
       messages: [],
     },
   ]
@@ -43,6 +43,7 @@ export default function SobreActividadPage() {
     activeBlockId,
     setActiveBlock,
     addMessageToBlock,
+    updateBlockStatus,
   } = useBlocks(initialBlocks)
 
   const blockOptions = blocks.map((block) => ({
@@ -197,6 +198,7 @@ export default function SobreActividadPage() {
                   title={block.title}
                   fields={sobreActividadFields}
                   viabilizacionStatus={block.viabilizacionStatus}
+                  onViabilizacionStatusChange={(status) => updateBlockStatus(block.id, status)}
                   onComment={handleCommentClick}
                 />
               ))}

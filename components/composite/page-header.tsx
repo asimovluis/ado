@@ -43,7 +43,10 @@ export function PageHeader({
 
     // Escuchar cambios en localStorage
     const handleStorageChange = () => {
-      updateAllBlocks()
+      // Diferir la actualización del estado para evitar actualizar durante el renderizado
+      setTimeout(() => {
+        updateAllBlocks()
+      }, 0)
     }
 
     // Escuchar el evento storage (cuando cambia localStorage)

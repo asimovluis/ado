@@ -18,7 +18,7 @@ export interface ChatMessage {
 export interface ContentBlock {
   id: string
   title: string
-  viabilizacionStatus: ViabilizacionStatus
+  viabilizacionStatus: ViabilizacionStatus | null
   messages: ChatMessage[]
 }
 

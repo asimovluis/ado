@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ItineraryTimeline } from "@/components/composite/itinerary-timeline"
 import { MessageSquare, MoreVertical, Send } from "lucide-react"
+import { ViabilizacionStatusSelector } from "@/components/composite/viabilizacion-status-selector"
 import { useBlocks } from "@/prototype-logic/use-blocks"
 import { createUserMessage } from "@/prototype-logic/message-helpers"
 import type { ContentBlock } from "@/prototype-logic/types"
@@ -141,7 +142,7 @@ export default function ViajesPage() {
   const initialBlocks: ContentBlock[] = travelCards.map((travel) => ({
     id: travel.id,
     title: travel.title,
-    viabilizacionStatus: "pendiente" as const,
+    viabilizacionStatus: null,
     messages: [], // Inicializar con historial limpio
   }))
 
@@ -183,7 +184,7 @@ export default function ViajesPage() {
     { id: "beneficiarios", label: "Beneficiarios", active: pathname === "/beneficiarios", href: "/beneficiarios" },
     { id: "gastos", label: "Gastos", active: pathname === "/gastos", href: "/gastos" },
     { id: "viajes", label: "Viajes", active: pathname === "/viajes", href: "/viajes" },
-    { id: "viabilizacion", label: "Viabilización", active: pathname === "/viabilizacion", href: "/viabilizacion" },
+    { id: "observaciones-generales", label: "Observaciones generales", active: pathname === "/observaciones-generales", href: "/observaciones-generales" },
   ]
 
   return (
@@ -241,7 +242,13 @@ export default function ViajesPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
                   >
-                    <Card className="relative gap-6 w-[600px]">
+                    <Card className={cn(
+                      "relative gap-6 w-[600px]",
+                      block?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
+                      block?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
+                      block?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
+                      ""
+                    )}>
                       <CardHeader>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-start gap-2">
@@ -298,6 +305,12 @@ export default function ViajesPage() {
                       </CardContent>
                       {/* Sección de botones al final del card */}
                       <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
+                        {block && (
+                          <ViabilizacionStatusSelector
+                            status={block.viabilizacionStatus || null}
+                            onStatusChange={(status) => updateBlockStatus(block.id, status)}
+                          />
+                        )}
                         <Button
                           variant="ghost"
                           className="gap-1.5 h-9 px-4"
