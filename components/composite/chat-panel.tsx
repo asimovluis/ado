@@ -98,8 +98,8 @@ export function ChatPanel({
         {false && viabilizacionStatus && onViabilizacionStatusChange && (
           <div className="w-fit">
             <ViabilizacionStatusSelector
-              status={viabilizacionStatus}
-              onStatusChange={onViabilizacionStatusChange}
+              status={viabilizacionStatus || "pendiente"}
+              onStatusChange={onViabilizacionStatusChange || (() => {})}
             />
           </div>
         )}

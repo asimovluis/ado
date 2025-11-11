@@ -51,8 +51,8 @@ export function FormCard({
               <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
                 {false && viabilizacionStatus && onViabilizacionStatusChange && (
                   <ViabilizacionStatusSelector
-                    status={viabilizacionStatus}
-                    onStatusChange={onViabilizacionStatusChange}
+                    status={viabilizacionStatus || "pendiente"}
+                    onStatusChange={onViabilizacionStatusChange || (() => {})}
                   />
                 )}
                 <motion.div
@@ -98,8 +98,8 @@ export function FormCard({
         <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
           {false && viabilizacionStatus && onViabilizacionStatusChange && (
             <ViabilizacionStatusSelector
-              status={viabilizacionStatus}
-              onStatusChange={onViabilizacionStatusChange}
+              status={viabilizacionStatus || "pendiente"}
+              onStatusChange={onViabilizacionStatusChange || (() => {})}
             />
           )}
           <Button
