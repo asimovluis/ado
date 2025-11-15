@@ -36,6 +36,7 @@ export interface ViabilizacionFormData {
   }
   otrasNecesidadesDescripcion: string
   rangoPresupuesto: "pre-aprobado" | "ajustado" | null
+  montoAprobado: string
   observaciones: string
   beneficiariosSeleccionados: string[]
 }
@@ -72,6 +73,7 @@ export function ViabilizacionFormDialog({
     },
     otrasNecesidadesDescripcion: "",
     rangoPresupuesto: null,
+    montoAprobado: "",
     observaciones: "",
     beneficiariosSeleccionados: [],
   })
@@ -99,6 +101,7 @@ export function ViabilizacionFormDialog({
         },
         otrasNecesidadesDescripcion: "",
         rangoPresupuesto: null,
+        montoAprobado: "",
         observaciones: "",
         beneficiariosSeleccionados: [],
       })
@@ -299,6 +302,22 @@ export function ViabilizacionFormDialog({
                 </label>
               ))}
             </RadioGroup>
+            {formData.rangoPresupuesto === "ajustado" && (
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-sm font-medium text-foreground">
+                  Monto aprobado
+                </label>
+                <Input
+                  type="text"
+                  value={formData.montoAprobado}
+                  onChange={(e) =>
+                    setFormData({ ...formData, montoAprobado: e.target.value })
+                  }
+                  placeholder="Ingresa el monto aprobado..."
+                  className="w-full"
+                />
+              </div>
+            )}
           </div>
 
           {/* Beneficiarios */}
