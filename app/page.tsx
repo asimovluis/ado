@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
 import { AnchorNav } from "@/components/composite/anchor-nav"
 import { FormCard } from "@/components/composite/form-card"
-import { ChatPanel } from "@/components/composite/chat-panel"
+import { NotionCommentThread } from "@/components/composite/notion-comment-thread"
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { MessageSquare, MoreVertical, Send } from "lucide-react"
 import { ViabilizacionStatusSelector, type ViabilizacionStatus } from "@/components/composite/viabilizacion-status-selector"
 import { ItineraryTimeline } from "@/components/composite/itinerary-timeline"
@@ -40,10 +41,12 @@ interface TravelCard {
 
 export default function Home() {
   const router = useRouter()
-  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [beneficiariosViabilizacion, setBeneficiariosViabilizacion] = useState<Record<string, ViabilizacionStatus>>({})
   const [observaciones, setObservaciones] = useState("")
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null)
+  const [hasEnoughSpace, setHasEnoughSpace] = useState(false) // Se actualizará en el useEffect
+  const [focusedThreadId, setFocusedThreadId] = useState<string | null>(null)
 
   // Datos de viajes
   const travelCards: TravelCard[] = [
@@ -168,6 +171,8 @@ export default function Home() {
     setActiveBlock,
     addMessageToBlock,
     updateBlockStatus,
+    updateMessageInBlock,
+    deleteMessageFromBlock,
   } = useBlocks(initialBlocks)
 
   // Función helper para obtener el estado de viabilización de un bloque
@@ -274,16 +279,17 @@ export default function Home() {
     label: block.title,
   }))
 
-  const handleCommentClick = (blockId: string) => {
-    setActiveBlock(blockId)
-    setIsChatPanelOpen(true)
+  const handleSendMessage = (blockId: string, message: string) => {
+    const userMessage = createUserMessage(message)
+    addMessageToBlock(blockId, userMessage)
   }
 
-  const handleSendMessage = (message: string) => {
-    if (activeBlockId) {
-      const userMessage = createUserMessage(message)
-      addMessageToBlock(activeBlockId, userMessage)
-    }
+  const handleEditMessage = (blockId: string, messageId: string, updatedContent: string) => {
+    updateMessageInBlock(blockId, messageId, updatedContent)
+  }
+
+  const handleDeleteMessage = (blockId: string, messageId: string) => {
+    deleteMessageFromBlock(blockId, messageId)
   }
 
   const handleBeneficiarioViabilizacionChange = (beneficiarioName: string, status: ViabilizacionStatus) => {
@@ -315,22 +321,64 @@ export default function Home() {
     }
   }, [observaciones, isMounted])
 
-  // Cerrar el panel de comentarios con la tecla Escape
+  // Detectar ancho de pantalla para mostrar/ocultar threads
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isChatPanelOpen) {
-        setIsChatPanelOpen(false)
-      }
+    const THRESHOLD = 1380 // Breakpoint para mostrar threads - CAMBIADO DE 1300 A 1380
+    
+    const checkWidth = () => {
+      // Medir el ancho completo de la ventana (window.innerWidth)
+      // Los threads deben mostrarse cuando la pantalla completa sea >= 1380px
+      if (typeof window === "undefined") return
+      
+      const windowWidth = window.innerWidth
+      // IMPORTANTE: El breakpoint es 1380, NO 1300
+      const hasSpace = windowWidth >= 1380
+      // Debug: activado temporalmente para verificar
+      console.log('Window width:', windowWidth, 'Has enough space:', hasSpace, 'Threshold: 1380 (NO 1300)')
+      setHasEnoughSpace(hasSpace)
     }
-
-    if (isChatPanelOpen) {
-      window.addEventListener("keydown", handleEscape)
+    
+    // Verificar inmediatamente
+    checkWidth()
+    
+    // También verificar después de delays para asegurar que el DOM esté listo
+    const timeoutId = setTimeout(checkWidth, 0)
+    const timeoutId2 = setTimeout(checkWidth, 100)
+    const timeoutId3 = setTimeout(checkWidth, 300)
+    
+    // Escuchar cambios de tamaño de la ventana
+    window.addEventListener("resize", checkWidth)
+    
+    // También usar ResizeObserver como respaldo
+    const resizeObserver = new ResizeObserver(checkWidth)
+    if (document.body) {
+      resizeObserver.observe(document.body)
     }
-
+    
     return () => {
-      window.removeEventListener("keydown", handleEscape)
+      clearTimeout(timeoutId)
+      clearTimeout(timeoutId2)
+      clearTimeout(timeoutId3)
+      window.removeEventListener("resize", checkWidth)
+      resizeObserver.disconnect()
     }
-  }, [isChatPanelOpen])
+  }, [])
+
+  const handleCommentClick = (blockId: string) => {
+    // Si no hay suficiente espacio, siempre abrir en modal
+    if (!hasEnoughSpace) {
+      setOpenThreadId(blockId)
+    } else {
+      // Si hay suficiente espacio, el thread ya está visible inline, hacer focus en el input
+      setTimeout(() => {
+        const input = document.querySelector(`[data-thread-id="${blockId}"] input`) as HTMLInputElement
+        if (input) {
+          input.focus()
+        }
+      }, 50)
+    }
+  }
+
 
   // Campos de formulario
   const antecedentesGeneralesFields = [
@@ -453,11 +501,11 @@ export default function Home() {
       />
       <div className="flex grow overflow-hidden">
         <AnchorNav items={anchorNavItems} />
-        <main className="flex grow flex-col gap-2 overflow-y-auto px-4 py-2">
-          <div className="flex flex-col gap-10 items-center w-full">
+        <main className="flex grow overflow-y-auto overflow-x-hidden px-4 py-2">
+          <div className="flex flex-col gap-10 items-center w-full max-w-[1400px] mx-auto" data-content-wrapper>
             {/* Sección: Antecedentes */}
-            <section id="antecedentes" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex flex-col gap-3 items-center w-full">
+            <section id="antecedentes" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex flex-col gap-3 items-start w-full">
                 <Card className="w-[600px]">
                   <CardContent className="p-0">
                     <Accordion type="single" collapsible className="w-full">
@@ -490,46 +538,66 @@ export default function Home() {
               </div>
             </section>
 
-            <Separator className="w-full max-w-[600px]" />
+            <Separator className="w-full" />
 
             {/* Sección: Sobre la actividad */}
-            <section id="sobre-actividad" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex items-center px-0 py-3 w-[600px]">
+            <section id="sobre-actividad" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Sobre la actividad
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-center w-full">
-                {getBlock("sobre-actividad") && (
-                  <FormCard
-                    id="sobre-actividad"
-                    title={getBlock("sobre-actividad")!.title}
-                    fields={sobreActividadFields}
-                    viabilizacionStatus={getBlock("sobre-actividad")!.viabilizacionStatus}
-                    onViabilizacionStatusChange={(status) => updateBlockStatus("sobre-actividad", status)}
-                    onComment={handleCommentClick}
-                  />
+              <div className="flex gap-4 items-start justify-between w-full">
+                <div className="flex-1 w-full max-w-[600px]">
+                  {getBlock("sobre-actividad") && (
+                    <FormCard
+                      id="sobre-actividad"
+                      title={getBlock("sobre-actividad")!.title}
+                      fields={sobreActividadFields}
+                      viabilizacionStatus={getBlock("sobre-actividad")!.viabilizacionStatus}
+                      onViabilizacionStatusChange={(status) => updateBlockStatus("sobre-actividad", status)}
+                      onComment={() => handleCommentClick("sobre-actividad")}
+                      className={cn(
+                        focusedThreadId === "sobre-actividad" && "ring-4 ring-ring/20 shadow-xl transition-all"
+                      )}
+                    />
+                  )}
+                </div>
+                {getBlock("sobre-actividad") && hasEnoughSpace && (
+                  <div className="w-[360px] shrink-0 sticky top-4 self-start">
+                    <NotionCommentThread
+                      messages={getBlock("sobre-actividad")!.messages}
+                      onSend={(message) => handleSendMessage("sobre-actividad", message)}
+                      onEdit={(messageId, updatedContent) => handleEditMessage("sobre-actividad", messageId, updatedContent)}
+                      onDelete={(messageId) => handleDeleteMessage("sobre-actividad", messageId)}
+                      onFocus={() => setFocusedThreadId("sobre-actividad")}
+                      onBlur={() => setFocusedThreadId(null)}
+                      threadId="sobre-actividad"
+                    />
+                  </div>
                 )}
               </div>
             </section>
 
-            <Separator className="w-full max-w-[600px]" />
+            <Separator className="w-full" />
 
             {/* Sección: Beneficiarios */}
-            <section id="beneficiarios" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex items-center px-0 py-3 w-full max-w-[920px]">
+            <section id="beneficiarios" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Beneficiarios
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-center w-full">
-                {getBlock("beneficiarios") && (
-                  <Card className={cn(
-                    "relative gap-6 w-full max-w-[920px]",
+              <div className="flex gap-4 items-start justify-between w-full">
+                <div className="flex-1 w-full max-w-[920px] min-w-0">
+                  {getBlock("beneficiarios") && (
+                    <Card className={cn(
+                      "relative gap-6 w-full transition-all",
                     getBlock("beneficiarios")?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
                     getBlock("beneficiarios")?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
                     getBlock("beneficiarios")?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                    ""
+                    "",
+                    focusedThreadId === "beneficiarios" && "ring-4 ring-ring/20 shadow-xl"
                   )}>
                     <CardHeader>
                       <div className="flex items-start gap-2">
@@ -558,12 +626,12 @@ export default function Home() {
                         </CardAction>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
+                    <CardContent className="flex flex-col gap-4 min-w-0">
                       <p className="text-base font-semibold text-foreground leading-6">
                         {BENEFICIARIOS.length} Beneficiarios
                       </p>
-                      <div className="border border-border rounded-md overflow-hidden">
-                        <Table>
+                      <div className="border border-border rounded-md overflow-x-auto w-full min-w-0">
+                        <Table className="w-full">
                           <TableHeader>
                             <TableRow className="border-b hover:bg-transparent">
                               <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
@@ -684,27 +752,43 @@ export default function Home() {
                       </Button>
                     </div>
                   </Card>
+                  )}
+                </div>
+                {getBlock("beneficiarios") && hasEnoughSpace && (
+                  <div className="w-[360px] shrink-0 sticky top-4 self-start">
+                    <NotionCommentThread
+                      messages={getBlock("beneficiarios")!.messages}
+                      onSend={(message) => handleSendMessage("beneficiarios", message)}
+                      onEdit={(messageId, updatedContent) => handleEditMessage("beneficiarios", messageId, updatedContent)}
+                      onDelete={(messageId) => handleDeleteMessage("beneficiarios", messageId)}
+                      onFocus={() => setFocusedThreadId("beneficiarios")}
+                      onBlur={() => setFocusedThreadId(null)}
+                      threadId="beneficiarios"
+                    />
+                  </div>
                 )}
               </div>
             </section>
 
-            <Separator className="w-full max-w-[600px]" />
+            <Separator className="w-full" />
 
             {/* Sección: Gastos */}
-            <section id="gastos" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex items-center px-0 py-3 w-full max-w-[920px]">
+            <section id="gastos" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Gastos
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-center w-full">
-                {getBlock("gastos") && (
-                  <Card className={cn(
-                    "relative gap-6 w-full max-w-[920px]",
+              <div className="flex gap-4 items-start justify-between w-full">
+                <div className="flex-1 w-full max-w-[920px] min-w-0">
+                  {getBlock("gastos") && (
+                    <Card className={cn(
+                      "relative gap-6 w-full transition-all",
                     getBlock("gastos")?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
                     getBlock("gastos")?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
                     getBlock("gastos")?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                    ""
+                    "",
+                    focusedThreadId === "gastos" && "ring-4 ring-ring/20 shadow-xl"
                   )}>
                     <CardHeader>
                       <div className="flex items-start gap-2">
@@ -713,24 +797,6 @@ export default function Home() {
                             Gastos
                           </CardTitle>
                         </div>
-                        <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                          >
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCommentClick("gastos")
-                              }}
-                            >
-                              <MessageSquare className="size-5" />
-                            </Button>
-                          </motion.div>
-                        </CardAction>
                       </div>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
@@ -789,9 +855,6 @@ export default function Home() {
                               <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[160px]">
                                 Tipo de gasto
                               </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                Descripción
-                              </TableHead>
                               <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
                                 Precio unitario
                               </TableHead>
@@ -812,14 +875,14 @@ export default function Home() {
                             ].map((row, idx) => (
                               <TableRow key={idx} className="border-b hover:bg-transparent">
                                 <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.type}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5 whitespace-pre-wrap">
-                                    {row.description}
-                                  </p>
+                                  <div className="flex flex-col gap-1">
+                                    <p className="text-sm text-foreground leading-5">
+                                      {row.type}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground leading-5 whitespace-pre-wrap">
+                                      {row.description}
+                                    </p>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="p-3 min-h-[68px] whitespace-normal">
                                   <p className="text-sm text-foreground leading-5 text-right">
@@ -862,35 +925,51 @@ export default function Home() {
                       </Button>
                     </div>
                   </Card>
+                  )}
+                </div>
+                {getBlock("gastos") && hasEnoughSpace && (
+                  <div className="w-[360px] shrink-0 sticky top-4 self-start">
+                    <NotionCommentThread
+                      messages={getBlock("gastos")!.messages}
+                      onSend={(message) => handleSendMessage("gastos", message)}
+                      onEdit={(messageId, updatedContent) => handleEditMessage("gastos", messageId, updatedContent)}
+                      onDelete={(messageId) => handleDeleteMessage("gastos", messageId)}
+                      onFocus={() => setFocusedThreadId("gastos")}
+                      onBlur={() => setFocusedThreadId(null)}
+                      threadId="gastos"
+                    />
+                  </div>
                 )}
               </div>
             </section>
 
-            <Separator className="w-full max-w-[600px]" />
+            <Separator className="w-full" />
 
             {/* Sección: Viajes */}
-            <section id="viajes" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex items-center px-0 py-3 w-[600px]">
+            <section id="viajes" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Viajes
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-center w-full">
+              <div className="flex flex-col gap-3 items-start w-full">
                 {travelCards.map((travel, index) => {
                   const block = getBlock(travel.id)
                   return (
-                    <motion.div
-                      key={travel.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
-                    >
-                      <Card className={cn(
-                        "relative gap-6 w-[600px]",
+                    <div key={travel.id} className="flex gap-4 items-start justify-between w-full">
+                      <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
+                        className="flex-1 max-w-[600px]"
+                      >
+                        <Card className={cn(
+                          "relative gap-6 w-full transition-all",
                         block?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
                         block?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
                         block?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                        ""
+                        "",
+                        focusedThreadId === travel.id && "ring-4 ring-ring/20 shadow-xl"
                       )}>
                         <CardHeader>
                           <div className="flex flex-col gap-2">
@@ -966,23 +1045,37 @@ export default function Home() {
                           </Button>
                         </div>
                       </Card>
-                    </motion.div>
+                      </motion.div>
+                      {block && hasEnoughSpace && (
+                        <div className="w-[360px] shrink-0 sticky top-4 self-start">
+                          <NotionCommentThread
+                            messages={block.messages}
+                            onSend={(message) => handleSendMessage(block.id, message)}
+                            onEdit={(messageId, updatedContent) => handleEditMessage(block.id, messageId, updatedContent)}
+                            onDelete={(messageId) => handleDeleteMessage(block.id, messageId)}
+                            onFocus={() => setFocusedThreadId(travel.id)}
+                            onBlur={() => setFocusedThreadId(null)}
+                            threadId={travel.id}
+                          />
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>
             </section>
 
-            <Separator className="w-full max-w-[600px]" />
+            <Separator className="w-full" />
 
             {/* Sección: Observaciones generales */}
-            <section id="observaciones-generales" className="flex flex-col gap-10 items-center w-full scroll-mt-20">
-              <div className="flex items-center px-0 py-3 w-full max-w-[920px]">
+            <section id="observaciones-generales" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+              <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Observaciones generales
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-center w-full">
-                <Card className="relative gap-6 w-full max-w-[920px]">
+              <div className="flex flex-col gap-3 items-start w-full">
+                <Card className="relative gap-6 w-full max-w-[600px]">
                   <CardHeader>
                     <CardTitle className="text-lg font-bold leading-7">
                       Observaciones generales
@@ -1001,20 +1094,36 @@ export default function Home() {
             </section>
           </div>
         </main>
-        <AnimatePresence mode="wait">
-          {isChatPanelOpen && activeBlock && (
-            <ChatPanel 
-              messages={activeBlock.messages}
-              onClose={() => setIsChatPanelOpen(false)}
-              onSend={handleSendMessage}
-              blocks={blockOptions}
-              selectedBlockId={activeBlockId}
-              onBlockSelect={(blockId) => {
-                setActiveBlock(blockId)
-              }}
-            />
-          )}
-        </AnimatePresence>
+        
+        {/* Modal para threads en pantallas pequeñas */}
+        <Dialog open={openThreadId !== null} onOpenChange={(open) => !open && setOpenThreadId(null)}>
+          <DialogContent className="max-w-[400px] max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>
+                {openThreadId && getBlock(openThreadId)?.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
+              {openThreadId && getBlock(openThreadId) && (
+                <NotionCommentThread
+                  messages={getBlock(openThreadId)!.messages}
+                  onSend={(message) => {
+                    handleSendMessage(openThreadId, message)
+                    // Si hay suficiente espacio, cerrar el modal después de un breve delay para que el estado se actualice
+                    // El thread aparecerá inline automáticamente porque ahora tiene mensajes
+                    if (hasEnoughSpace) {
+                      setTimeout(() => {
+                        setOpenThreadId(null)
+                      }, 100)
+                    }
+                  }}
+                  onEdit={(messageId, updatedContent) => handleEditMessage(openThreadId, messageId, updatedContent)}
+                  onDelete={(messageId) => handleDeleteMessage(openThreadId, messageId)}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

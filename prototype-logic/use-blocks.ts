@@ -190,6 +190,44 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
     })
   }, [])
 
+  const updateMessageInBlock = useCallback((blockId: string, messageId: string, updatedContent: string) => {
+    setBlocksState((prev) => {
+      const updated = {
+        ...prev,
+        blocks: prev.blocks.map((block) =>
+          block.id === blockId
+            ? {
+                ...block,
+                messages: block.messages.map((msg) =>
+                  msg.id === messageId
+                    ? { ...msg, content: updatedContent }
+                    : msg
+                ),
+              }
+            : block
+        ),
+      }
+      return updated
+    })
+  }, [])
+
+  const deleteMessageFromBlock = useCallback((blockId: string, messageId: string) => {
+    setBlocksState((prev) => {
+      const updated = {
+        ...prev,
+        blocks: prev.blocks.map((block) =>
+          block.id === blockId
+            ? {
+                ...block,
+                messages: block.messages.filter((msg) => msg.id !== messageId),
+              }
+            : block
+        ),
+      }
+      return updated
+    })
+  }, [])
+
   const activeBlock = blocksState.blocks.find(
     (block) => block.id === blocksState.activeBlockId
   ) || null
@@ -201,6 +239,8 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
     setActiveBlock,
     updateBlockStatus,
     addMessageToBlock,
+    updateMessageInBlock,
+    deleteMessageFromBlock,
   }
 }
 
