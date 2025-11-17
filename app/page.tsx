@@ -365,17 +365,23 @@ export default function Home() {
   }, [])
 
   const handleCommentClick = (blockId: string) => {
+    const block = getBlock(blockId)
+    const hasMessages = block && block.messages.length > 0
+    
     // Si no hay suficiente espacio, siempre abrir en modal
     if (!hasEnoughSpace) {
       setOpenThreadId(blockId)
-    } else {
-      // Si hay suficiente espacio, el thread ya está visible inline, hacer focus en el input
+    } else if (hasMessages) {
+      // Si hay suficiente espacio y hay mensajes, el thread está visible inline, hacer focus en el input
       setTimeout(() => {
         const input = document.querySelector(`[data-thread-id="${blockId}"] input`) as HTMLInputElement
         if (input) {
           input.focus()
         }
       }, 50)
+    } else {
+      // Si hay suficiente espacio pero no hay mensajes, el thread no está visible inline, abrir modal
+      setOpenThreadId(blockId)
     }
   }
 
@@ -563,7 +569,7 @@ export default function Home() {
                     />
                   )}
                 </div>
-                {getBlock("sobre-actividad") && hasEnoughSpace && (
+                {getBlock("sobre-actividad") && hasEnoughSpace && getBlock("sobre-actividad")!.messages.length > 0 && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("sobre-actividad")!.messages}
@@ -754,7 +760,7 @@ export default function Home() {
                   </Card>
                   )}
                 </div>
-                {getBlock("beneficiarios") && hasEnoughSpace && (
+                {getBlock("beneficiarios") && hasEnoughSpace && getBlock("beneficiarios")!.messages.length > 0 && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("beneficiarios")!.messages}
@@ -927,7 +933,7 @@ export default function Home() {
                   </Card>
                   )}
                 </div>
-                {getBlock("gastos") && hasEnoughSpace && (
+                {getBlock("gastos") && hasEnoughSpace && getBlock("gastos")!.messages.length > 0 && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("gastos")!.messages}
@@ -1046,7 +1052,7 @@ export default function Home() {
                         </div>
                       </Card>
                       </motion.div>
-                      {block && hasEnoughSpace && (
+                      {block && hasEnoughSpace && block.messages.length > 0 && (
                         <div className="w-[360px] shrink-0 sticky top-4 self-start">
                           <NotionCommentThread
                             messages={block.messages}
@@ -1068,7 +1074,7 @@ export default function Home() {
             <Separator className="w-full" />
 
             {/* Sección: Observaciones generales */}
-            <section id="observaciones-generales" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
+            <section id="observaciones-generales" className="flex flex-col gap-10 items-start w-full scroll-mt-20 pb-20">
               <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
                   Observaciones generales
