@@ -47,6 +47,7 @@ export default function Home() {
   const [openThreadId, setOpenThreadId] = useState<string | null>(null)
   const [hasEnoughSpace, setHasEnoughSpace] = useState(false) // Se actualizará en el useEffect
   const [focusedThreadId, setFocusedThreadId] = useState<string | null>(null)
+  const [visibleEmptyThreads, setVisibleEmptyThreads] = useState<Set<string>>(new Set())
 
   // Datos de viajes
   const travelCards: TravelCard[] = [
@@ -282,6 +283,12 @@ export default function Home() {
   const handleSendMessage = (blockId: string, message: string) => {
     const userMessage = createUserMessage(message)
     addMessageToBlock(blockId, userMessage)
+    // Limpiar el estado de thread visible vacío ya que ahora tiene mensajes
+    setVisibleEmptyThreads(prev => {
+      const next = new Set(prev)
+      next.delete(blockId)
+      return next
+    })
   }
 
   const handleEditMessage = (blockId: string, messageId: string, updatedContent: string) => {
@@ -380,8 +387,14 @@ export default function Home() {
         }
       }, 50)
     } else {
-      // Si hay suficiente espacio pero no hay mensajes, el thread no está visible inline, abrir modal
-      setOpenThreadId(blockId)
+      // Si hay suficiente espacio pero no hay mensajes, mostrar el thread inline
+      setVisibleEmptyThreads(prev => new Set(prev).add(blockId))
+      setTimeout(() => {
+        const input = document.querySelector(`[data-thread-id="${blockId}"] input`) as HTMLInputElement
+        if (input) {
+          input.focus()
+        }
+      }, 50)
     }
   }
 
@@ -569,7 +582,7 @@ export default function Home() {
                     />
                   )}
                 </div>
-                {getBlock("sobre-actividad") && hasEnoughSpace && getBlock("sobre-actividad")!.messages.length > 0 && (
+                {getBlock("sobre-actividad") && hasEnoughSpace && (getBlock("sobre-actividad")!.messages.length > 0 || visibleEmptyThreads.has("sobre-actividad")) && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("sobre-actividad")!.messages}
@@ -760,7 +773,7 @@ export default function Home() {
                   </Card>
                   )}
                 </div>
-                {getBlock("beneficiarios") && hasEnoughSpace && getBlock("beneficiarios")!.messages.length > 0 && (
+                {getBlock("beneficiarios") && hasEnoughSpace && (getBlock("beneficiarios")!.messages.length > 0 || visibleEmptyThreads.has("beneficiarios")) && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("beneficiarios")!.messages}
@@ -933,7 +946,7 @@ export default function Home() {
                   </Card>
                   )}
                 </div>
-                {getBlock("gastos") && hasEnoughSpace && getBlock("gastos")!.messages.length > 0 && (
+                {getBlock("gastos") && hasEnoughSpace && (getBlock("gastos")!.messages.length > 0 || visibleEmptyThreads.has("gastos")) && (
                   <div className="w-[360px] shrink-0 sticky top-4 self-start">
                     <NotionCommentThread
                       messages={getBlock("gastos")!.messages}
@@ -1052,7 +1065,7 @@ export default function Home() {
                         </div>
                       </Card>
                       </motion.div>
-                      {block && hasEnoughSpace && block.messages.length > 0 && (
+                      {block && hasEnoughSpace && (block.messages.length > 0 || visibleEmptyThreads.has(travel.id)) && (
                         <div className="w-[360px] shrink-0 sticky top-4 self-start">
                           <NotionCommentThread
                             messages={block.messages}
