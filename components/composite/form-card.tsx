@@ -23,15 +23,15 @@ interface FormCardProps {
   className?: string
 }
 
-export function FormCard({ 
+export function FormCard({
   id,
-  title, 
+  title,
   fields,
   viabilizacionStatus,
   onViabilizacionStatusChange,
-  onEdit, 
+  onEdit,
   onComment,
-  className 
+  className
 }: FormCardProps) {
   // Determinar el color de fondo según el estado de viabilización
   const getBackgroundColor = () => {
@@ -96,8 +96,8 @@ export function FormCard({
               key={index}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ 
-                duration: 0.2, 
+              transition={{
+                duration: 0.2,
                 delay: index * 0.03,
                 ease: [0.4, 0, 0.2, 1]
               }}
@@ -117,13 +117,7 @@ export function FormCard({
           ))}
         </CardContent>
         {/* Sección de botones al final del card */}
-        <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-          {onViabilizacionStatusChange && (
-            <ViabilizacionStatusSelector
-              status={viabilizacionStatus || null}
-              onStatusChange={onViabilizacionStatusChange}
-            />
-          )}
+        <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
           <Button
             variant="ghost"
             className="gap-1.5 h-9 px-4"

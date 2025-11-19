@@ -14,13 +14,13 @@ function getStorageKey(initialBlocks: ContentBlock[]): string {
   // Crear una clave única basada en los IDs de los bloques iniciales
   // Esto permite que diferentes páginas tengan sus propios bloques
   const blockIds = initialBlocks.map(b => b.id).sort().join("-")
-  return `ado-blocks-${blockIds}`
+  return `ado-blocks-v2-${blockIds}`
 }
 
 // Función para obtener datos del localStorage
 function getStoredBlocks(storageKey: string): ContentBlock[] | null {
   if (typeof window === "undefined") return null
-  
+
   try {
     const stored = localStorage.getItem(storageKey)
     if (stored) {
@@ -35,7 +35,7 @@ function getStoredBlocks(storageKey: string): ContentBlock[] | null {
 // Función para guardar datos en localStorage
 function saveStoredBlocks(storageKey: string, blocks: ContentBlock[]) {
   if (typeof window === "undefined") return
-  
+
   try {
     localStorage.setItem(storageKey, JSON.stringify(blocks))
   } catch (error) {
@@ -49,7 +49,7 @@ function saveStoredBlocks(storageKey: string, blocks: ContentBlock[]) {
  */
 export function clearStoredBlocks() {
   if (typeof window === "undefined") return
-  
+
   try {
     // Limpiar todas las claves que empiecen con "ado-blocks-"
     const keysToRemove: string[] = []
@@ -70,7 +70,7 @@ export function clearStoredBlocks() {
 
 // Exponer la función en window para fácil acceso desde la consola
 if (typeof window !== "undefined") {
-  ;(window as any).clearADOComments = clearStoredBlocks
+  ; (window as any).clearADOComments = clearStoredBlocks
 }
 
 /**
@@ -79,10 +79,10 @@ if (typeof window !== "undefined") {
  */
 export function getAllBlocksFromStorage(): ContentBlock[] {
   if (typeof window === "undefined") return []
-  
+
   try {
     const allBlocks: ContentBlock[] = []
-    
+
     // Iterar sobre todas las claves de localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -98,7 +98,7 @@ export function getAllBlocksFromStorage(): ContentBlock[] {
         }
       }
     }
-    
+
     return allBlocks
   } catch (error) {
     console.error("Error al obtener todos los bloques:", error)
@@ -109,7 +109,7 @@ export function getAllBlocksFromStorage(): ContentBlock[] {
 export function useBlocks(initialBlocks: ContentBlock[]) {
   // Obtener la clave de almacenamiento única para esta página
   const storageKey = getStorageKey(initialBlocks)
-  
+
   // Inicializar siempre con los bloques iniciales (igual en servidor y cliente)
   // Esto previene errores de hidratación
   const [blocksState, setBlocksState] = useState<BlocksState>(() => ({
@@ -120,11 +120,11 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
   // Cargar desde localStorage solo en el cliente después del montaje
   useEffect(() => {
     const storedBlocks = getStoredBlocks(storageKey)
-    
+
     if (storedBlocks) {
       // Crear un mapa de bloques guardados por ID
       const storedBlocksMap = new Map(storedBlocks.map(b => [b.id, b]))
-      
+
       // Para cada bloque inicial, usar el guardado si existe, o el inicial si no
       const blocksToUse = initialBlocks.map(initialBlock => {
         const storedBlock = storedBlocksMap.get(initialBlock.id)
@@ -135,7 +135,7 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
         // Usar el bloque inicial (nuevo o sin datos guardados)
         return initialBlock
       })
-      
+
       setBlocksState({
         blocks: blocksToUse,
         activeBlockId: blocksToUse[0]?.id || null,
@@ -197,13 +197,13 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
         blocks: prev.blocks.map((block) =>
           block.id === blockId
             ? {
-                ...block,
-                messages: block.messages.map((msg) =>
-                  msg.id === messageId
-                    ? { ...msg, content: updatedContent }
-                    : msg
-                ),
-              }
+              ...block,
+              messages: block.messages.map((msg) =>
+                msg.id === messageId
+                  ? { ...msg, content: updatedContent }
+                  : msg
+              ),
+            }
             : block
         ),
       }
@@ -218,9 +218,9 @@ export function useBlocks(initialBlocks: ContentBlock[]) {
         blocks: prev.blocks.map((block) =>
           block.id === blockId
             ? {
-                ...block,
-                messages: block.messages.filter((msg) => msg.id !== messageId),
-              }
+              ...block,
+              messages: block.messages.filter((msg) => msg.id !== messageId),
+            }
             : block
         ),
       }

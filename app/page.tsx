@@ -157,12 +157,7 @@ export default function Home() {
     { id: "sobre-actividad", title: "Sobre la actividad", viabilizacionStatus: null, messages: [] },
     { id: "beneficiarios", title: "Beneficiarios", viabilizacionStatus: null, messages: [] },
     { id: "gastos", title: "Gastos", viabilizacionStatus: null, messages: [] },
-    ...travelCards.map((travel) => ({
-      id: travel.id,
-      title: travel.title,
-      viabilizacionStatus: null,
-      messages: [],
-    })),
+    { id: "viajes", title: "Viajes", viabilizacionStatus: null, messages: [] },
   ]
 
   const {
@@ -182,98 +177,14 @@ export default function Home() {
     return block?.viabilizacionStatus || null
   }
 
-  // Calcular progreso de beneficiarios
-  const beneficiariosProgress = useMemo(() => {
-    const total = BENEFICIARIOS.length
-    const statusCounts = {
-      viabilizado: 0,
-      "pre-viabilizado": 0,
-      "no-viabilizado": 0,
-    }
-    let withStatus = 0
-
-    BENEFICIARIOS.forEach((beneficiario) => {
-      const status = beneficiariosViabilizacion[beneficiario.name]
-      if (status) {
-        withStatus++
-        if (status === "viabilizado") {
-          statusCounts.viabilizado++
-        } else if (status === "pre-viabilizado") {
-          statusCounts["pre-viabilizado"]++
-        } else if (status === "no-viabilizado") {
-          statusCounts["no-viabilizado"]++
-        }
-      }
-    })
-
-    return {
-      progressCount: withStatus,
-      progressTotal: total,
-      statusCounts: {
-        viabilizado: statusCounts.viabilizado > 0 ? statusCounts.viabilizado : undefined,
-        "pre-viabilizado": statusCounts["pre-viabilizado"] > 0 ? statusCounts["pre-viabilizado"] : undefined,
-        "no-viabilizado": statusCounts["no-viabilizado"] > 0 ? statusCounts["no-viabilizado"] : undefined,
-      },
-    }
-  }, [beneficiariosViabilizacion])
-
-  // Calcular progreso de viajes
-  const viajesProgress = useMemo(() => {
-    const total = travelCards.length
-    const statusCounts = {
-      viabilizado: 0,
-      "pre-viabilizado": 0,
-      "no-viabilizado": 0,
-    }
-    let withStatus = 0
-
-    travelCards.forEach((travel) => {
-      const block = blocks.find(b => b.id === travel.id)
-      if (block?.viabilizacionStatus) {
-        withStatus++
-        if (block.viabilizacionStatus === "viabilizado") {
-          statusCounts.viabilizado++
-        } else if (block.viabilizacionStatus === "pre-viabilizado") {
-          statusCounts["pre-viabilizado"]++
-        } else if (block.viabilizacionStatus === "no-viabilizado") {
-          statusCounts["no-viabilizado"]++
-        }
-      }
-    })
-
-    return {
-      progressCount: withStatus,
-      progressTotal: total,
-      statusCounts: {
-        viabilizado: statusCounts.viabilizado > 0 ? statusCounts.viabilizado : undefined,
-        "pre-viabilizado": statusCounts["pre-viabilizado"] > 0 ? statusCounts["pre-viabilizado"] : undefined,
-        "no-viabilizado": statusCounts["no-viabilizado"] > 0 ? statusCounts["no-viabilizado"] : undefined,
-      },
-    }
-  }, [blocks, travelCards])
-
-  // Navegación con anchor links - recalcular cuando cambien los bloques
+  // Navegación con anchor links
   const anchorNavItems = useMemo(() => [
-    { id: "sobre-actividad", label: "Sobre la actividad", anchor: "sobre-actividad", viabilizacionStatus: getBlockStatus("sobre-actividad") },
-    { 
-      id: "beneficiarios", 
-      label: "Beneficiarios", 
-      anchor: "beneficiarios", 
-      progressCount: beneficiariosProgress.progressCount,
-      progressTotal: beneficiariosProgress.progressTotal,
-      statusCounts: beneficiariosProgress.statusCounts,
-    },
-    { id: "gastos", label: "Gastos", anchor: "gastos", viabilizacionStatus: getBlockStatus("gastos") },
-    { 
-      id: "viajes", 
-      label: "Viajes", 
-      anchor: "viajes",
-      progressCount: viajesProgress.progressCount,
-      progressTotal: viajesProgress.progressTotal,
-      statusCounts: viajesProgress.statusCounts,
-    },
-    { id: "observaciones-generales", label: "Observaciones generales", anchor: "observaciones-generales", viabilizacionStatus: null },
-  ], [blocks, beneficiariosProgress, viajesProgress])
+    { id: "sobre-actividad", label: "Sobre la actividad", anchor: "sobre-actividad" },
+    { id: "beneficiarios", label: "Beneficiarios", anchor: "beneficiarios" },
+    { id: "gastos", label: "Gastos", anchor: "gastos" },
+    { id: "viajes", label: "Viajes", anchor: "viajes" },
+    { id: "observaciones-generales", label: "Observaciones generales", anchor: "observaciones-generales" },
+  ], [])
 
   const blockOptions = blocks.map((block) => ({
     id: block.id,
@@ -315,7 +226,7 @@ export default function Home() {
     setIsMounted(true)
     const stored = getBeneficiariosViabilizacion()
     setBeneficiariosViabilizacion(stored)
-    
+
     const storedObservaciones = localStorage.getItem(STORAGE_KEY)
     if (storedObservaciones) {
       setObservaciones(storedObservaciones)
@@ -331,12 +242,12 @@ export default function Home() {
   // Detectar ancho de pantalla para mostrar/ocultar threads
   useEffect(() => {
     const THRESHOLD = 1380 // Breakpoint para mostrar threads - CAMBIADO DE 1300 A 1380
-    
+
     const checkWidth = () => {
       // Medir el ancho completo de la ventana (window.innerWidth)
       // Los threads deben mostrarse cuando la pantalla completa sea >= 1380px
       if (typeof window === "undefined") return
-      
+
       const windowWidth = window.innerWidth
       // IMPORTANTE: El breakpoint es 1380, NO 1300
       const hasSpace = windowWidth >= 1380
@@ -344,24 +255,24 @@ export default function Home() {
       console.log('Window width:', windowWidth, 'Has enough space:', hasSpace, 'Threshold: 1380 (NO 1300)')
       setHasEnoughSpace(hasSpace)
     }
-    
+
     // Verificar inmediatamente
     checkWidth()
-    
+
     // También verificar después de delays para asegurar que el DOM esté listo
     const timeoutId = setTimeout(checkWidth, 0)
     const timeoutId2 = setTimeout(checkWidth, 100)
     const timeoutId3 = setTimeout(checkWidth, 300)
-    
+
     // Escuchar cambios de tamaño de la ventana
     window.addEventListener("resize", checkWidth)
-    
+
     // También usar ResizeObserver como respaldo
     const resizeObserver = new ResizeObserver(checkWidth)
     if (document.body) {
       resizeObserver.observe(document.body)
     }
-    
+
     return () => {
       clearTimeout(timeoutId)
       clearTimeout(timeoutId2)
@@ -374,7 +285,7 @@ export default function Home() {
   const handleCommentClick = (blockId: string) => {
     const block = getBlock(blockId)
     const hasMessages = block && block.messages.length > 0
-    
+
     // Si no hay suficiente espacio, siempre abrir en modal
     if (!hasEnoughSpace) {
       setOpenThreadId(blockId)
@@ -573,8 +484,6 @@ export default function Home() {
                       id="sobre-actividad"
                       title={getBlock("sobre-actividad")!.title}
                       fields={sobreActividadFields}
-                      viabilizacionStatus={getBlock("sobre-actividad")!.viabilizacionStatus}
-                      onViabilizacionStatusChange={(status) => updateBlockStatus("sobre-actividad", status)}
                       onComment={() => handleCommentClick("sobre-actividad")}
                       className={cn(
                         focusedThreadId === "sobre-actividad" && "ring-4 ring-ring/20 shadow-xl transition-all"
@@ -612,165 +521,151 @@ export default function Home() {
                   {getBlock("beneficiarios") && (
                     <Card className={cn(
                       "relative gap-6 w-full transition-all",
-                    getBlock("beneficiarios")?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
-                    getBlock("beneficiarios")?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
-                    getBlock("beneficiarios")?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                    "",
-                    focusedThreadId === "beneficiarios" && "ring-4 ring-ring/20 shadow-xl"
-                  )}>
-                    <CardHeader>
-                      <div className="flex items-start gap-2">
-                        <div className="flex flex-col gap-2 grow min-w-0">
-                          <CardTitle className="text-lg font-bold leading-7">
-                            Beneficiarios
-                          </CardTitle>
-                        </div>
-                        <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                          >
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCommentClick("beneficiarios")
-                              }}
+                      focusedThreadId === "beneficiarios" && "ring-4 ring-ring/20 shadow-xl"
+                    )}>
+                      <CardHeader>
+                        <div className="flex items-start gap-2">
+                          <div className="flex flex-col gap-2 grow min-w-0">
+                            <CardTitle className="text-lg font-bold leading-7">
+                              Beneficiarios
+                            </CardTitle>
+                          </div>
+                          <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
+                            <motion.div
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
                             >
-                              <MessageSquare className="size-5" />
-                            </Button>
-                          </motion.div>
-                        </CardAction>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4 min-w-0">
-                      <p className="text-base font-semibold text-foreground leading-6">
-                        {BENEFICIARIOS.length} Beneficiarios
-                      </p>
-                      <div className="border border-border rounded-md overflow-x-auto w-full min-w-0">
-                        <Table className="w-full">
-                          <TableHeader>
-                            <TableRow className="border-b hover:bg-transparent">
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                Nombre y modalidad
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                Género
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                Rol
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[134px]">
-                                Nacionalidad
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[132px]">
-                                Documento
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[110px]">
-                                Fecha nacimiento
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                Teléfono y correo
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {BENEFICIARIOS.map((row, idx) => {
-                              const beneficiarioStatus = beneficiariosViabilizacion[row.name] || null
-                              const getRowBackground = () => {
-                                if (beneficiarioStatus === "viabilizado") {
-                                  return "bg-green-100 hover:!bg-green-100"
-                                } else if (beneficiarioStatus === "pre-viabilizado") {
-                                  return "bg-cyan-50 hover:!bg-cyan-50"
-                                } else if (beneficiarioStatus === "no-viabilizado") {
-                                  return "bg-orange-50 hover:!bg-orange-50"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCommentClick("beneficiarios")
+                                }}
+                              >
+                                <MessageSquare className="size-5" />
+                              </Button>
+                            </motion.div>
+                          </CardAction>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4 min-w-0">
+                        <p className="text-base font-semibold text-foreground leading-6">
+                          {BENEFICIARIOS.length} Beneficiarios
+                        </p>
+                        <div className="border border-border rounded-md overflow-x-auto w-full min-w-0">
+                          <Table className="w-full">
+                            <TableHeader>
+                              <TableRow className="border-b hover:bg-transparent">
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                  Nombre y modalidad
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                  Género
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                  Rol
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[134px]">
+                                  Nacionalidad
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[132px]">
+                                  Documento
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[110px]">
+                                  Fecha nacimiento
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                  Teléfono y correo
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {BENEFICIARIOS.map((row, idx) => {
+                                const beneficiarioStatus = beneficiariosViabilizacion[row.name] || null
+                                const getRowBackground = () => {
+                                  if (beneficiarioStatus === "viabilizado") {
+                                    return "bg-green-100 hover:!bg-green-100"
+                                  } else if (beneficiarioStatus === "pre-viabilizado") {
+                                    return "bg-cyan-50 hover:!bg-cyan-50"
+                                  } else if (beneficiarioStatus === "no-viabilizado") {
+                                    return "bg-orange-50 hover:!bg-orange-50"
+                                  }
+                                  return "hover:!bg-transparent"
                                 }
-                                return "hover:!bg-transparent"
-                              }
-                              
-                              return (
-                              <TableRow key={idx} className={cn("border-b", getRowBackground())}>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <div className="flex flex-col gap-2">
-                                    <div>
-                                      <p className="text-sm font-semibold text-foreground leading-5">
-                                        {row.name}
+
+                                return (
+                                  <TableRow key={idx} className={cn("border-b", getRowBackground())}>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <div className="flex flex-col gap-2">
+                                        <div>
+                                          <p className="text-sm font-semibold text-foreground leading-5">
+                                            {row.name}
+                                          </p>
+                                          <p className="text-sm text-muted-foreground leading-5">
+                                            {row.modality}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.gender}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.role}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.nationality}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.doc}
                                       </p>
                                       <p className="text-sm text-muted-foreground leading-5">
-                                        {row.modality}
+                                        {row.docType}
                                       </p>
-                                    </div>
-                                    {isMounted && (
-                                      <div className="pt-1">
-                                        <ViabilizacionStatusSelector
-                                          status={beneficiariosViabilizacion[row.name] || null}
-                                          onStatusChange={(status) => handleBeneficiarioViabilizacionChange(row.name, status)}
-                                          hidePreViabilizado
-                                          hideLabels
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.gender}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.role}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.nationality}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.doc}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground leading-5">
-                                    {row.docType}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.birthDate}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 align-top whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5">
-                                    {row.phone}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground leading-5">
-                                    {row.email}
-                                  </p>
-                                </TableCell>
-                              </TableRow>
-                              )
-                            })}
-                          </TableBody>
-                        </Table>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.birthDate}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="p-3 align-top whitespace-normal">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.phone}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground leading-5">
+                                        {row.email}
+                                      </p>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                      <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("beneficiarios")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
                       </div>
-                    </CardContent>
-                    <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
-                      <Button
-                        variant="ghost"
-                        className="gap-1.5 h-9 px-4"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCommentClick("beneficiarios")
-                        }}
-                      >
-                        <MessageSquare className="size-5" />
-                        <span className="text-sm font-medium">Comentarios</span>
-                      </Button>
-                    </div>
-                  </Card>
+                    </Card>
                   )}
                 </div>
                 {getBlock("beneficiarios") && hasEnoughSpace && (getBlock("beneficiarios")!.messages.length > 0 || visibleEmptyThreads.has("beneficiarios")) && (
@@ -803,147 +698,137 @@ export default function Home() {
                   {getBlock("gastos") && (
                     <Card className={cn(
                       "relative gap-6 w-full transition-all",
-                    getBlock("gastos")?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
-                    getBlock("gastos")?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
-                    getBlock("gastos")?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                    "",
-                    focusedThreadId === "gastos" && "ring-4 ring-ring/20 shadow-xl"
-                  )}>
-                    <CardHeader>
-                      <div className="flex items-start gap-2">
-                        <div className="flex flex-col gap-2 grow min-w-0">
-                          <CardTitle className="text-lg font-bold leading-7">
-                            Gastos
-                          </CardTitle>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-2 p-4 border border-border rounded-lg bg-background">
-                        <div className="flex flex-col gap-1">
-                          <p className="text-base font-medium text-foreground leading-6">
-                            🟢 Gastos dentro de lo presupuestado
-                          </p>
-                          <p className="text-sm text-foreground leading-5">
-                            No hay problemas con el total de gastos que has agregado
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-3">
-                          <div className="relative h-2 bg-[#d8f999] rounded-full overflow-hidden">
-                            <div className="absolute h-4 bg-[#00b8db] left-0 right-[25.25%] top-1/2 -translate-y-1/2" />
-                            <div className="absolute h-4 bg-[hsl(var(--chart-3))] left-0 right-[55.75%] top-1/2 -translate-y-1/2" />
+                      focusedThreadId === "gastos" && "ring-4 ring-ring/20 shadow-xl"
+                    )}>
+                      <CardHeader>
+                        <div className="flex items-start gap-2">
+                          <div className="flex flex-col gap-2 grow min-w-0">
+                            <CardTitle className="text-lg font-bold leading-7">
+                              Gastos
+                            </CardTitle>
                           </div>
-                          <div className="flex gap-4">
-                            <div className="flex flex-col gap-0.5 grow">
-                              <p className="text-xs font-medium text-foreground leading-4">
-                                Presupuesto total
-                              </p>
-                              <p className="text-sm text-foreground leading-5">
-                                $999.999.999
-                              </p>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2 p-4 border border-border rounded-lg bg-background">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-base font-medium text-foreground leading-6">
+                              🟢 Gastos dentro de lo presupuestado
+                            </p>
+                            <p className="text-sm text-foreground leading-5">
+                              No hay problemas con el total de gastos que has agregado
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                            <div className="relative h-2 bg-[#d8f999] rounded-full overflow-hidden">
+                              <div className="absolute h-4 bg-[#00b8db] left-0 right-[25.25%] top-1/2 -translate-y-1/2" />
+                              <div className="absolute h-4 bg-[hsl(var(--chart-3))] left-0 right-[55.75%] top-1/2 -translate-y-1/2" />
                             </div>
-                            <div className="flex flex-col gap-0.5 grow">
-                              <div className="flex items-center gap-2">
-                                <div className="size-3 bg-[#00b8db] border border-border rounded-sm shrink-0" />
+                            <div className="flex gap-4">
+                              <div className="flex flex-col gap-0.5 grow">
                                 <p className="text-xs font-medium text-foreground leading-4">
-                                  Gastos agregados
+                                  Presupuesto total
+                                </p>
+                                <p className="text-sm text-foreground leading-5">
+                                  $999.999.999
                                 </p>
                               </div>
-                              <p className="text-sm text-foreground leading-5">
-                                $999.999.999
-                              </p>
-                            </div>
-                            <div className="flex flex-col gap-0.5 grow">
-                              <div className="flex items-center gap-2">
-                                <div className="size-3 bg-[#d8f999] border border-border rounded-sm shrink-0" />
-                                <p className="text-xs font-medium text-foreground leading-4">
-                                  Disponible
+                              <div className="flex flex-col gap-0.5 grow">
+                                <div className="flex items-center gap-2">
+                                  <div className="size-3 bg-[#00b8db] border border-border rounded-sm shrink-0" />
+                                  <p className="text-xs font-medium text-foreground leading-4">
+                                    Gastos agregados
+                                  </p>
+                                </div>
+                                <p className="text-sm text-foreground leading-5">
+                                  $999.999.999
                                 </p>
                               </div>
-                              <p className="text-sm text-foreground leading-5">
-                                $999.999.999
-                              </p>
+                              <div className="flex flex-col gap-0.5 grow">
+                                <div className="flex items-center gap-2">
+                                  <div className="size-3 bg-[#d8f999] border border-border rounded-sm shrink-0" />
+                                  <p className="text-xs font-medium text-foreground leading-4">
+                                    Disponible
+                                  </p>
+                                </div>
+                                <p className="text-sm text-foreground leading-5">
+                                  $999.999.999
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="border border-border rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-b hover:bg-transparent">
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[160px]">
-                                Tipo de gasto
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
-                                Precio unitario
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
-                                Cantidad
-                              </TableHead>
-                              <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
-                                Precio total
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {[
-                              { type: "Alojamiento", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
-                              { type: "Alojamiento", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
-                              { type: "Alimentación", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
-                              { type: "Alimentación", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
-                            ].map((row, idx) => (
-                              <TableRow key={idx} className="border-b hover:bg-transparent">
-                                <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <div className="flex flex-col gap-1">
-                                    <p className="text-sm text-foreground leading-5">
-                                      {row.type}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground leading-5 whitespace-pre-wrap">
-                                      {row.description}
-                                    </p>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5 text-right">
-                                    {row.unitPrice}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5 text-right">
-                                    {row.quantity}
-                                  </p>
-                                </TableCell>
-                                <TableCell className="p-3 min-h-[68px] whitespace-normal">
-                                  <p className="text-sm text-foreground leading-5 text-right">
-                                    {row.total}
-                                  </p>
-                                </TableCell>
+                        <div className="border border-border rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-b hover:bg-transparent">
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap min-w-[160px]">
+                                  Tipo de gasto
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
+                                  Precio unitario
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
+                                  Cantidad
+                                </TableHead>
+                                <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap text-right min-w-[160px]">
+                                  Precio total
+                                </TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {[
+                                { type: "Alojamiento", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
+                                { type: "Alojamiento", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
+                                { type: "Alimentación", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
+                                { type: "Alimentación", description: "Habitación doble (16 al 25 de agosto )  x 190.000 por dia ", unitPrice: "$999.999.999", quantity: "10", total: "$999.999.999" },
+                              ].map((row, idx) => (
+                                <TableRow key={idx} className="border-b hover:bg-transparent">
+                                  <TableCell className="p-3 min-h-[68px] whitespace-normal">
+                                    <div className="flex flex-col gap-1">
+                                      <p className="text-sm text-foreground leading-5">
+                                        {row.type}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground leading-5 whitespace-pre-wrap">
+                                        {row.description}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[68px] whitespace-normal">
+                                    <p className="text-sm text-foreground leading-5 text-right">
+                                      {row.unitPrice}
+                                    </p>
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[68px] whitespace-normal">
+                                    <p className="text-sm text-foreground leading-5 text-right">
+                                      {row.quantity}
+                                    </p>
+                                  </TableCell>
+                                  <TableCell className="p-3 min-h-[68px] whitespace-normal">
+                                    <p className="text-sm text-foreground leading-5 text-right">
+                                      {row.total}
+                                    </p>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                      <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("gastos")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
                       </div>
-                    </CardContent>
-                    <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-                      {getBlock("gastos") && (
-                        <ViabilizacionStatusSelector
-                          status={getBlock("gastos")!.viabilizacionStatus || null}
-                          onStatusChange={(status) => updateBlockStatus("gastos", status)}
-                        />
-                      )}
-                      <Button
-                        variant="ghost"
-                        className="gap-1.5 h-9 px-4"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCommentClick("gastos")
-                        }}
-                      >
-                        <MessageSquare className="size-5" />
-                        <span className="text-sm font-medium">Comentarios</span>
-                      </Button>
-                    </div>
-                  </Card>
+                    </Card>
                   )}
                 </div>
                 {getBlock("gastos") && hasEnoughSpace && (getBlock("gastos")!.messages.length > 0 || visibleEmptyThreads.has("gastos")) && (
@@ -971,116 +856,110 @@ export default function Home() {
                   Viajes
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-start w-full">
-                {travelCards.map((travel, index) => {
-                  const block = getBlock(travel.id)
-                  return (
-                    <div key={travel.id} className="flex gap-4 items-start justify-between w-full">
-                      <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
-                        className="flex-1 max-w-[600px]"
-                      >
-                        <Card className={cn(
-                          "relative gap-6 w-full transition-all",
-                        block?.viabilizacionStatus === "viabilizado" ? "bg-green-100 shadow-[0_2px_8px_rgba(34,197,94,0.1)]" :
-                        block?.viabilizacionStatus === "pre-viabilizado" ? "bg-cyan-50 shadow-[0_2px_8px_rgba(103,232,249,0.1)]" :
-                        block?.viabilizacionStatus === "no-viabilizado" ? "bg-orange-50 shadow-[0_2px_8px_rgba(251,146,60,0.1)]" :
-                        "",
-                        focusedThreadId === travel.id && "ring-4 ring-ring/20 shadow-xl"
-                      )}>
-                        <CardHeader>
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-start gap-2">
-                              <div className="flex flex-col gap-2 grow min-w-0">
-                                <CardTitle className="text-lg font-bold leading-7">
-                                  {travel.title}
-                                </CardTitle>
+              <div className="flex gap-4 items-start justify-between w-full">
+                <div className="flex-1 w-full max-w-[600px]">
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <Card className={cn(
+                      "relative gap-6 w-full transition-all",
+                      focusedThreadId === "viajes" && "ring-4 ring-ring/20 shadow-xl"
+                    )}>
+                      <CardHeader>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start gap-2">
+                            <div className="flex flex-col gap-2 grow min-w-0">
+                              <CardTitle className="text-lg font-bold leading-7">
+                                Detalle de viajes
+                              </CardTitle>
+                            </div>
+                            <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCommentClick("viajes")
+                                }}
+                              >
+                                <MessageSquare className="size-5" />
+                              </Button>
+                            </CardAction>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-10 px-6">
+                        {travelCards.map((travel, index) => (
+                          <div key={travel.id} className="flex flex-col gap-6">
+                            {index > 0 && <Separator className="w-full" />}
+                            <div className="flex flex-col gap-4">
+                              <h3 className="text-base font-semibold leading-6">
+                                {travel.title}
+                              </h3>
+                              <div className="flex gap-6 items-start">
+                                <div className="basis-0 flex flex-col grow items-start min-h-px min-w-px relative shrink-0">
+                                  <ItineraryTimeline sections={travel.itinerary.sections} />
+                                </div>
+                                <div className="flex items-start justify-center relative shrink-0 w-[251px]">
+                                  <div className="basis-0 flex flex-col grow items-center min-h-px min-w-px relative shrink-0">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="border-b hover:bg-transparent">
+                                          <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
+                                            Pasajeros
+                                          </TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {travel.passengers.map((passenger, idx) => (
+                                          <TableRow key={idx} className="border-b hover:bg-transparent">
+                                            <TableCell className="p-3 h-10 whitespace-normal">
+                                              <p className="text-sm text-foreground leading-5">
+                                                {passenger}
+                                              </p>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
                               </div>
-                              <CardAction className="absolute right-2 top-2 flex gap-1 shrink-0">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCommentClick(travel.id)
-                                  }}
-                                >
-                                  <MessageSquare className="size-5" />
-                                </Button>
-                              </CardAction>
                             </div>
                           </div>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-6 px-6">
-                          <div className="flex gap-6 items-start">
-                            <div className="basis-0 flex flex-col grow items-start min-h-px min-w-px relative shrink-0">
-                              <ItineraryTimeline sections={travel.itinerary.sections} />
-                            </div>
-                            <div className="flex items-start justify-center relative shrink-0 w-[251px]">
-                              <div className="basis-0 flex flex-col grow items-center min-h-px min-w-px relative shrink-0">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow className="border-b hover:bg-transparent">
-                                      <TableHead className="p-3 text-sm font-medium text-muted-foreground leading-5 whitespace-nowrap">
-                                        Pasajeros
-                                      </TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {travel.passengers.map((passenger, idx) => (
-                                      <TableRow key={idx} className="border-b hover:bg-transparent">
-                                        <TableCell className="p-3 h-10 whitespace-normal">
-                                          <p className="text-sm text-foreground leading-5">
-                                            {passenger}
-                                          </p>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <div className="border-t border-border flex items-center justify-between pt-3 px-6 pb-0">
-                          {block && (
-                            <ViabilizacionStatusSelector
-                              status={block.viabilizacionStatus || null}
-                              onStatusChange={(status) => updateBlockStatus(block.id, status)}
-                            />
-                          )}
-                          <Button
-                            variant="ghost"
-                            className="gap-1.5 h-9 px-4"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCommentClick(travel.id)
-                            }}
-                          >
-                            <MessageSquare className="size-5" />
-                            <span className="text-sm font-medium">Comentarios</span>
-                          </Button>
-                        </div>
-                      </Card>
-                      </motion.div>
-                      {block && hasEnoughSpace && (block.messages.length > 0 || visibleEmptyThreads.has(travel.id)) && (
-                        <div className="w-[360px] shrink-0 sticky top-4 self-start">
-                          <NotionCommentThread
-                            messages={block.messages}
-                            onSend={(message) => handleSendMessage(block.id, message)}
-                            onEdit={(messageId, updatedContent) => handleEditMessage(block.id, messageId, updatedContent)}
-                            onDelete={(messageId) => handleDeleteMessage(block.id, messageId)}
-                            onFocus={() => setFocusedThreadId(travel.id)}
-                            onBlur={() => setFocusedThreadId(null)}
-                            threadId={travel.id}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                        ))}
+                      </CardContent>
+                      <div className="border-t border-border flex items-center justify-end pt-3 px-6 pb-0">
+                        <Button
+                          variant="ghost"
+                          className="gap-1.5 h-9 px-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCommentClick("viajes")
+                          }}
+                        >
+                          <MessageSquare className="size-5" />
+                          <span className="text-sm font-medium">Comentarios</span>
+                        </Button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                </div>
+                {getBlock("viajes") && hasEnoughSpace && (getBlock("viajes")!.messages.length > 0 || visibleEmptyThreads.has("viajes")) && (
+                  <div className="w-[360px] shrink-0 sticky top-4 self-start">
+                    <NotionCommentThread
+                      messages={getBlock("viajes")!.messages}
+                      onSend={(message) => handleSendMessage("viajes", message)}
+                      onEdit={(messageId, updatedContent) => handleEditMessage("viajes", messageId, updatedContent)}
+                      onDelete={(messageId) => handleDeleteMessage("viajes", messageId)}
+                      onFocus={() => setFocusedThreadId("viajes")}
+                      onBlur={() => setFocusedThreadId(null)}
+                      threadId="viajes"
+                    />
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1113,7 +992,7 @@ export default function Home() {
             </section>
           </div>
         </main>
-        
+
         {/* Modal para threads en pantallas pequeñas */}
         <Dialog open={openThreadId !== null} onOpenChange={(open) => !open && setOpenThreadId(null)}>
           <DialogContent className="max-w-[400px] max-h-[80vh] overflow-hidden flex flex-col">

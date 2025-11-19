@@ -34,7 +34,7 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
   useEffect(() => {
     // Encontrar el contenedor de scroll (main)
     const scrollContainer = document.querySelector('main[class*="overflow-y-auto"]') as HTMLElement
-    
+
     const handleScroll = () => {
       if (!scrollContainer) return
 
@@ -43,11 +43,11 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
         if (element) {
           const rect = element.getBoundingClientRect()
           const containerRect = scrollContainer.getBoundingClientRect()
-          
+
           // Calcular posición relativa al contenedor de scroll
           const relativeTop = rect.top - containerRect.top + scrollContainer.scrollTop
           const relativeBottom = rect.bottom - containerRect.top + scrollContainer.scrollTop
-          
+
           return {
             id: item.anchor,
             top: relativeTop,
@@ -58,7 +58,7 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
           }
         }
         return null
-      }).filter(Boolean) as Array<{ 
+      }).filter(Boolean) as Array<{
         id: string
         top: number
         bottom: number
@@ -85,14 +85,14 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
         // Calcular qué tan visible está la sección
         const sectionTop = section.top
         const sectionBottom = section.bottom
-        
+
         // Verificar si la sección está visible en el viewport
         const isVisible = sectionBottom > viewportTop && sectionTop < viewportBottom
-        
+
         if (isVisible) {
           // Calcular un score basado en qué tan cerca está del punto de activación (40% del viewport)
           let score = 0
-          
+
           // Si el punto de activación está dentro de la sección, mayor score
           if (sectionTop <= activationPoint && sectionBottom >= activationPoint) {
             // El punto de activación está dentro de la sección
@@ -110,7 +110,7 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
             // La sección contiene el punto de activación pero no está centrada
             score = 70
           }
-          
+
           if (score > 0 && (!bestMatch || score > bestMatch.score)) {
             bestMatch = { id: section.id, score }
           }
@@ -124,7 +124,7 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
         // Si no hay ninguna visible, usar la más cercana al punto de activación
         let closestSection = ""
         let minDistance = Infinity
-        
+
         for (const section of sections) {
           const distance = Math.abs(section.top - activationPoint)
           if (distance < minDistance) {
@@ -132,7 +132,7 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
             closestSection = section.id
           }
         }
-        
+
         if (closestSection) {
           currentSection = closestSection
         }
@@ -171,19 +171,19 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
   const handleClick = (anchor: string) => {
     const element = document.getElementById(anchor)
     const scrollContainer = document.querySelector('main[class*="overflow-y-auto"]') as HTMLElement
-    
+
     if (element && scrollContainer) {
       // Calcular la posición relativa al contenedor
       const containerRect = scrollContainer.getBoundingClientRect()
       const elementRect = element.getBoundingClientRect()
       const currentScrollTop = scrollContainer.scrollTop
-      
+
       // Calcular la posición del elemento relativa al contenedor
       const elementTopRelativeToContainer = elementRect.top - containerRect.top + currentScrollTop
-      
+
       // Offset para dejar espacio arriba
       const offset = 20
-      
+
       scrollContainer.scrollTo({
         top: Math.max(0, elementTopRelativeToContainer - offset),
         behavior: "smooth",
@@ -202,12 +202,12 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
   }
 
   // Componente de radial progress miniatura
-  const RadialProgress = ({ 
-    progress, 
-    size = 16 
-  }: { 
+  const RadialProgress = ({
+    progress,
+    size = 16
+  }: {
     progress: number // 0-100
-    size?: number 
+    size?: number
   }) => {
     const radius = (size - 4) / 2
     const circumference = 2 * Math.PI * radius
@@ -269,67 +269,21 @@ export function AnchorNav({ items, className }: AnchorNavProps) {
     <nav className={cn("flex flex-col gap-1 items-start shrink-0 sticky top-4 p-4 self-start", className)}>
       {items.map((item) => {
         const isActive = activeSection === item.anchor
-        
-        // Determinar si usar radial progress o icono de estado
-        const useRadialProgress = item.progressTotal !== undefined && item.progressTotal > 0
-        const progressPercentage = useRadialProgress && item.progressCount !== undefined && item.progressTotal !== undefined
-          ? (item.progressCount / item.progressTotal) * 100
-          : 0
 
-        // Badges de estado (solo si hay statusCounts)
-        const statusBadges = item.statusCounts ? [
-          item.statusCounts.viabilizado && item.statusCounts.viabilizado > 0 ? (
-            <Badge
-              key="viabilizado"
-              className="bg-green-100 border border-border text-foreground hover:bg-green-100 shrink-0 h-5 min-w-[20px] px-1.5 flex items-center justify-center"
-            >
-              {item.statusCounts.viabilizado}
-            </Badge>
-          ) : null,
-          item.statusCounts["pre-viabilizado"] && item.statusCounts["pre-viabilizado"] > 0 ? (
-            <Badge
-              key="pre-viabilizado"
-              className="bg-cyan-50 border border-border text-foreground hover:bg-cyan-50 shrink-0 h-5 min-w-[20px] px-1.5 flex items-center justify-center"
-            >
-              {item.statusCounts["pre-viabilizado"]}
-            </Badge>
-          ) : null,
-          item.statusCounts["no-viabilizado"] && item.statusCounts["no-viabilizado"] > 0 ? (
-            <Badge
-              key="no-viabilizado"
-              className="bg-orange-50 border border-border text-foreground hover:bg-orange-50 shrink-0 h-5 min-w-[20px] px-1.5 flex items-center justify-center"
-            >
-              {item.statusCounts["no-viabilizado"]}
-            </Badge>
-          ) : null,
-        ].filter(Boolean) : null
-        
         return (
           <Button
             key={item.id}
             variant="ghost"
             size="sm"
             className={cn(
-              "h-auto justify-start px-3 py-2 w-auto text-left transition-colors gap-2",
+              "h-auto justify-start px-3 py-2 w-auto text-left transition-colors",
               isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => handleClick(item.anchor)}
           >
-            {item.id !== "observaciones-generales" && (
-              useRadialProgress ? (
-                <RadialProgress progress={progressPercentage} size={16} />
-              ) : (
-                getStatusIcon(item.viabilizacionStatus)
-              )
-            )}
             <span className={cn("text-sm whitespace-nowrap", isActive && "font-medium")}>
               {item.label}
             </span>
-            {statusBadges && statusBadges.length > 0 && (
-              <div className="flex gap-1 items-center shrink-0">
-                {statusBadges}
-              </div>
-            )}
           </Button>
         )
       })}
