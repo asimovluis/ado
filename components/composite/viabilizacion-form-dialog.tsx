@@ -427,6 +427,16 @@ export function ViabilizacionFormDialog({
                 />
               </div>
             )}
+            {formData.rangoPresupuesto === "pre-aprobado" && (
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-sm font-medium text-foreground">
+                  Monto aprobado
+                </label>
+                <p className="text-sm text-foreground">
+                  $10.000.000
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Beneficiarios */}
