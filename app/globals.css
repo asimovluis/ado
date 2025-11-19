@@ -80,6 +80,7 @@
   --sidebar-accent-foreground: #0f172b;
   --sidebar-border: #e2e8f0;
   --sidebar-ring: #244997;
+  --teal-50: #f0fdfa;
   --teal-700: #00786f;
   --teal-700-foreground: #f8fafc;
   --chat-bubble-own: #f0fdfa;
@@ -118,6 +119,7 @@
   --sidebar-accent-foreground: #f1f5f9;
   --sidebar-border: rgba(30, 41, 59, 0.3);
   --sidebar-ring: #3b5fa8;
+  --teal-50: #0f172b;
   --teal-700: #00a693;
   --teal-700-foreground: #f8fafc;
   --chat-bubble-own: #0f172b;

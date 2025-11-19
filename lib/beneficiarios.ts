@@ -1,14 +1,15 @@
 export interface Beneficiario {
-  name: string
-  modality: string
+  name?: string
+  modality?: string
   gender: string
   role: string
-  nationality: string
-  doc: string
-  docType: string
-  birthDate: string
-  phone: string
-  email: string
+  nationality?: string
+  doc?: string
+  docType?: string
+  birthDate?: string
+  phone?: string
+  email?: string
+  isIncomplete?: boolean
 }
 
 export const BENEFICIARIOS: Beneficiario[] = [
@@ -27,5 +28,10 @@ export const BENEFICIARIOS: Beneficiario[] = [
   { name: "Camila Ríos Martínez", modality: "Entrenador", gender: "Mujer", role: "Técnico/Staff", nationality: "Chilena", doc: "12.345.678-K", docType: "RUT", birthDate: "01/01/1994", phone: "+56 912345678", email: "camila@atletismo.cl" },
   // Hombres técnico/staff
   { name: "Carlos Méndez", modality: "Entrenador", gender: "Hombre", role: "Técnico/Staff", nationality: "Chilena", doc: "12.345.678-K", docType: "RUT", birthDate: "01/01/1994", phone: "+56 912345678", email: "carlos@atletismo.cl" },
+  // Beneficiarios incompletos (solo género y rol)
+  { gender: "Hombre", role: "Deportista", isIncomplete: true },
+  { gender: "Mujer", role: "Deportista", isIncomplete: true },
+  { gender: "Hombre", role: "Técnico/Staff", isIncomplete: true },
+  { gender: "Mujer", role: "Técnico/Staff", isIncomplete: true },
 ]
 

@@ -13,12 +13,34 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { BadgeCheck, XOctagon, AlertTriangle } from "lucide-react"
+import { BadgeCheck, XOctagon, AlertTriangle, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BENEFICIARIOS, type Beneficiario } from "@/lib/beneficiarios"
+import type { ChatMessage } from "@/prototype-logic/types"
+
+export interface ActivitySummary {
+  nombre: string
+  lugar: string
+  fecha: string
+  beneficiariosBreakdown: {
+    total: number
+    hombresDeportistas: number
+    mujeresDeportistas: number
+    hombresStaff: number
+    mujeresStaff: number
+  }
+  criteriosSelectivos: string[]
+  basesTecnicas: string
+}
+
+export interface SectionComments {
+  sectionId: string
+  sectionTitle: string
+  messages: ChatMessage[]
+}
 
 export interface ViabilizacionFormData {
-  viabilizaTecnicamente: "si" | "no" | null
+  viabilizaTecnicamente: "si" | "no" | "con-indicaciones" | null
   tipoProducto: {
     implementacion: boolean
     entrenamientos: boolean
@@ -36,6 +58,7 @@ export interface ViabilizacionFormData {
   }
   otrasNecesidadesDescripcion: string
   rangoPresupuesto: "pre-aprobado" | "ajustado" | null
+  montoAprobado: string
   observaciones: string
   beneficiariosSeleccionados: string[]
 }
@@ -45,6 +68,8 @@ interface ViabilizacionFormDialogProps {
   onOpenChange: (open: boolean) => void
   initialData?: ViabilizacionFormData | null
   onSave: (data: ViabilizacionFormData) => void
+  activitySummary?: ActivitySummary
+  sectionComments?: SectionComments[]
 }
 
 export function ViabilizacionFormDialog({
@@ -52,6 +77,8 @@ export function ViabilizacionFormDialog({
   onOpenChange,
   initialData,
   onSave,
+  activitySummary,
+  sectionComments = [],
 }: ViabilizacionFormDialogProps) {
   const [formData, setFormData] = useState<ViabilizacionFormData>({
     viabilizaTecnicamente: null,
@@ -72,6 +99,7 @@ export function ViabilizacionFormDialog({
     },
     otrasNecesidadesDescripcion: "",
     rangoPresupuesto: null,
+    montoAprobado: "",
     observaciones: "",
     beneficiariosSeleccionados: [],
   })
@@ -99,6 +127,7 @@ export function ViabilizacionFormDialog({
         },
         otrasNecesidadesDescripcion: "",
         rangoPresupuesto: null,
+        montoAprobado: "",
         observaciones: "",
         beneficiariosSeleccionados: [],
       })
@@ -118,6 +147,73 @@ export function ViabilizacionFormDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-10">
+          {/* Resumen de la actividad */}
+          {activitySummary && (
+            <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/30">
+              <h3 className="text-base font-semibold text-foreground">Resumen de la actividad</h3>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Nombre actividad
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>{activitySummary.nombre}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Lugar
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>{activitySummary.lugar}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Fecha
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>{activitySummary.fecha}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Beneficiarios
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>
+                      {activitySummary.beneficiariosBreakdown.total} total (
+                      {activitySummary.beneficiariosBreakdown.hombresDeportistas} hombres deportistas,{" "}
+                      {activitySummary.beneficiariosBreakdown.mujeresDeportistas} mujeres deportistas,{" "}
+                      {activitySummary.beneficiariosBreakdown.hombresStaff} hombres staff,{" "}
+                      {activitySummary.beneficiariosBreakdown.mujeresStaff} mujeres staff)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Criterios selectivos
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>
+                      {activitySummary.criteriosSelectivos.length > 0
+                        ? activitySummary.criteriosSelectivos.join(", ")
+                        : "No especificados"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-medium text-muted-foreground leading-5">
+                    Bases técnicas
+                  </p>
+                  <div className="text-base leading-6 text-foreground">
+                    <p>{activitySummary.basesTecnicas}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ¿Se viabiliza técnicamente? */}
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
@@ -126,9 +222,9 @@ export function ViabilizacionFormDialog({
             <RadioGroup
               value={formData.viabilizaTecnicamente || undefined}
               onValueChange={(value) =>
-                setFormData({ ...formData, viabilizaTecnicamente: value as "si" | "no" })
+                setFormData({ ...formData, viabilizaTecnicamente: value as "si" | "no" | "con-indicaciones" })
               }
-              className="flex gap-3"
+              className="flex flex-col gap-3"
             >
               <label
                 className={cn(
@@ -161,6 +257,22 @@ export function ViabilizacionFormDialog({
                   No se viabiliza técnicamente
                 </span>
                 <RadioGroupItem value="no" className="shrink-0" />
+              </label>
+              <label
+                className={cn(
+                  "flex gap-2 items-center p-3 rounded-lg border-2 transition-colors grow cursor-pointer",
+                  formData.viabilizaTecnicamente === "con-indicaciones"
+                    ? "border-primary bg-accent"
+                    : "border-border bg-popover"
+                )}
+              >
+                <div className="size-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                  <BadgeCheck className="size-6 text-blue-700" />
+                </div>
+                <span className="text-sm font-medium text-foreground grow">
+                  Se viabiliza con indicaciones
+                </span>
+                <RadioGroupItem value="con-indicaciones" className="shrink-0" />
               </label>
             </RadioGroup>
           </div>
@@ -299,6 +411,22 @@ export function ViabilizacionFormDialog({
                 </label>
               ))}
             </RadioGroup>
+            {formData.rangoPresupuesto === "ajustado" && (
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-sm font-medium text-foreground">
+                  Monto aprobado
+                </label>
+                <Input
+                  type="text"
+                  value={formData.montoAprobado}
+                  onChange={(e) =>
+                    setFormData({ ...formData, montoAprobado: e.target.value })
+                  }
+                  placeholder="Ingresa el monto aprobado..."
+                  className="w-full"
+                />
+              </div>
+            )}
           </div>
 
           {/* Beneficiarios */}
@@ -310,13 +438,14 @@ export function ViabilizacionFormDialog({
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={
-                    formData.beneficiariosSeleccionados.length === BENEFICIARIOS.length
+                    formData.beneficiariosSeleccionados.length === BENEFICIARIOS.filter((b) => b.name).length &&
+                    BENEFICIARIOS.filter((b) => b.name).every((b) => formData.beneficiariosSeleccionados.includes(b.name || ""))
                   }
                   onCheckedChange={(checked) => {
                     if (checked) {
                       setFormData({
                         ...formData,
-                        beneficiariosSeleccionados: BENEFICIARIOS.map((b) => b.name),
+                        beneficiariosSeleccionados: BENEFICIARIOS.filter((b) => b.name).map((b) => b.name || ""),
                       })
                     } else {
                       setFormData({
@@ -338,57 +467,84 @@ export function ViabilizacionFormDialog({
               </p>
             </div>
             <div className="flex flex-col gap-1 border border-border rounded-lg overflow-hidden">
-              {BENEFICIARIOS.map((beneficiario) => (
-                <label
-                  key={beneficiario.name}
-                  className={cn(
-                    "flex gap-2 items-center p-3 border-b border-border last:border-b-0 cursor-pointer transition-colors",
-                    formData.beneficiariosSeleccionados.includes(beneficiario.name)
-                      ? "bg-accent"
-                      : "bg-popover"
-                  )}
-                >
-                  <div className="flex flex-col gap-1 grow min-w-0">
-                    <span className="text-sm font-medium text-foreground">
-                      {beneficiario.name}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {beneficiario.modality}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <span className="text-sm text-foreground w-20 text-right">
-                      {beneficiario.nationality}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <span className="text-sm text-foreground w-24">
-                      {beneficiario.doc}
-                    </span>
-                  </div>
-                  <Checkbox
-                    checked={formData.beneficiariosSeleccionados.includes(beneficiario.name)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setFormData({
-                          ...formData,
-                          beneficiariosSeleccionados: [
-                            ...formData.beneficiariosSeleccionados,
-                            beneficiario.name,
-                          ],
-                        })
-                      } else {
-                        setFormData({
-                          ...formData,
-                          beneficiariosSeleccionados: formData.beneficiariosSeleccionados.filter(
-                            (name) => name !== beneficiario.name
-                          ),
-                        })
-                      }
-                    }}
-                  />
-                </label>
-              ))}
+              {BENEFICIARIOS.map((beneficiario, idx) => {
+                const isIncomplete = beneficiario.isIncomplete || !beneficiario.name
+                const uniqueKey = beneficiario.name || `incomplete-${idx}`
+                
+                return (
+                  <label
+                    key={uniqueKey}
+                    className={cn(
+                      "flex gap-2 items-center p-3 border-b border-border last:border-b-0 transition-colors",
+                      isIncomplete
+                        ? "bg-muted/50 cursor-not-allowed opacity-60"
+                        : formData.beneficiariosSeleccionados.includes(beneficiario.name || "")
+                          ? "bg-accent cursor-pointer"
+                          : "bg-popover cursor-pointer"
+                    )}
+                  >
+                    <div className="flex flex-col gap-1 grow min-w-0">
+                      {isIncomplete ? (
+                        <>
+                          <span className="text-sm text-muted-foreground italic">
+                            No se ha indicado quién es
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {beneficiario.gender} - {beneficiario.role}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium text-foreground">
+                            {beneficiario.name}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {beneficiario.modality}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {!isIncomplete && (
+                      <>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <span className="text-sm text-foreground w-20 text-right">
+                            {beneficiario.nationality}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <span className="text-sm text-foreground w-24">
+                            {beneficiario.doc}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <Checkbox
+                      checked={!isIncomplete && formData.beneficiariosSeleccionados.includes(beneficiario.name || "")}
+                      onCheckedChange={(checked) => {
+                        if (!isIncomplete && beneficiario.name) {
+                          if (checked) {
+                            setFormData({
+                              ...formData,
+                              beneficiariosSeleccionados: [
+                                ...formData.beneficiariosSeleccionados,
+                                beneficiario.name,
+                              ],
+                            })
+                          } else {
+                            setFormData({
+                              ...formData,
+                              beneficiariosSeleccionados: formData.beneficiariosSeleccionados.filter(
+                                (name) => name !== beneficiario.name
+                              ),
+                            })
+                          }
+                        }
+                      }}
+                      disabled={isIncomplete}
+                    />
+                  </label>
+                )
+              })}
             </div>
           </div>
 
@@ -406,6 +562,33 @@ export function ViabilizacionFormDialog({
               className="min-h-[80px]"
             />
           </div>
+
+          {/* Resumen de comentarios */}
+          {sectionComments && sectionComments.length > 0 && (
+            <div className="flex flex-col gap-4 p-4 border border-border rounded-lg bg-muted/30">
+              <h3 className="text-base font-semibold text-foreground">Comentarios por sección</h3>
+              <div className="flex flex-col gap-4">
+                {sectionComments
+                  .filter((section) => section.messages.length > 0)
+                  .map((section) => (
+                    <div key={section.sectionId} className="flex flex-col gap-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {section.sectionTitle}
+                      </h4>
+                      <ul className="flex flex-col gap-2 list-disc list-inside">
+                        {section.messages.map((message) => (
+                          <li key={message.id} className="text-sm text-foreground">
+                            {typeof message.content === "string"
+                              ? message.content
+                              : String(message.content)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -420,4 +603,3 @@ export function ViabilizacionFormDialog({
     </Dialog>
   )
 }
-

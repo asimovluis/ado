@@ -1,11 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, MessageSquare, MoreVertical, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getAllBlocksFromStorage } from "@/prototype-logic/use-blocks"
-import type { ContentBlock } from "@/prototype-logic/types"
 import { ViabilizacionSummaryDialog } from "@/components/composite/viabilizacion-summary-dialog"
 
 interface PageHeaderProps {
@@ -23,56 +21,7 @@ export function PageHeader({
   rightActions,
   federacionName = "Atletismo"
 }: PageHeaderProps) {
-  // Obtener todos los bloques de todas las páginas para calcular el progreso global
-  const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([])
-  const [isMounted, setIsMounted] = useState(false)
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
-
-  useEffect(() => {
-    // Marcar como montado para evitar errores de hidratación
-    setIsMounted(true)
-    
-    // Función para obtener y actualizar todos los bloques
-    const updateAllBlocks = () => {
-      const blocks = getAllBlocksFromStorage()
-      setAllBlocks(blocks)
-    }
-
-    // Obtener bloques iniciales
-    updateAllBlocks()
-
-    // Escuchar cambios en localStorage
-    const handleStorageChange = () => {
-      // Diferir la actualización del estado para evitar actualizar durante el renderizado
-      setTimeout(() => {
-        updateAllBlocks()
-      }, 0)
-    }
-
-    // Escuchar el evento storage (cuando cambia localStorage)
-    window.addEventListener('storage', handleStorageChange)
-    
-    // También escuchar cambios personalizados (para cambios en la misma ventana)
-    window.addEventListener('blocksUpdated', handleStorageChange)
-
-    // Polling como fallback (cada 500ms)
-    const interval = setInterval(updateAllBlocks, 500)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('blocksUpdated', handleStorageChange)
-      clearInterval(interval)
-    }
-  }, [])
-
-  // Calcular progreso global - contar cualquier bloque con estado asignado
-  const bloquesConEstado = allBlocks.filter(
-    (block) => block.viabilizacionStatus !== null
-  ).length
-  const totalBlocks = allBlocks.length
-  const progressPercentage = totalBlocks > 0 
-    ? (bloquesConEstado / totalBlocks) * 100 
-    : 0
 
   return (
     <header
@@ -102,30 +51,6 @@ export function PageHeader({
           )}
         </div>
       </div>
-      {/* Barra de progreso */}
-      {isMounted && totalBlocks > 0 && (
-        <>
-          {/* Barra de progreso */}
-          <div className="flex flex-col gap-2 items-start shrink-0 w-[212px]">
-            <p className="text-sm font-medium text-muted-foreground leading-5">
-              Progreso de evaluación
-            </p>
-            <div className="flex gap-2 items-center w-full">
-              <span className="text-sm font-medium text-foreground leading-5 whitespace-nowrap">
-                {bloquesConEstado || 0}/{totalBlocks}
-              </span>
-                <div className="basis-0 bg-secondary grow h-2 overflow-hidden relative rounded-full">
-                  <div
-                    className="absolute bg-primary h-full left-0 top-0 rounded-full transition-all duration-300 ease-out"
-                    style={{
-                      width: `${Math.max(0, Math.min(100, progressPercentage))}%`,
-                    }}
-                  />
-                </div>
-            </div>
-          </div>
-        </>
-      )}
       {rightActions}
       <ViabilizacionSummaryDialog
         open={isSummaryDialogOpen}

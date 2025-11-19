@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { PageHeader } from "@/components/composite/page-header"
@@ -24,8 +24,9 @@ import { useBlocks } from "@/prototype-logic/use-blocks"
 import { createUserMessage } from "@/prototype-logic/message-helpers"
 import type { ContentBlock } from "@/prototype-logic/types"
 import { cn } from "@/lib/utils"
+import { ViabilizacionBlock } from "@/components/composite/viabilizacion-block"
+import { ViabilizacionFormDialog, type ViabilizacionFormData } from "@/components/composite/viabilizacion-form-dialog"
 
-const STORAGE_KEY = "ado-observaciones-generales"
 
 interface TravelCard {
   id: string
@@ -43,11 +44,12 @@ export default function Home() {
   const router = useRouter()
   const [isMounted, setIsMounted] = useState(false)
   const [beneficiariosViabilizacion, setBeneficiariosViabilizacion] = useState<Record<string, ViabilizacionStatus>>({})
-  const [observaciones, setObservaciones] = useState("")
   const [openThreadId, setOpenThreadId] = useState<string | null>(null)
   const [hasEnoughSpace, setHasEnoughSpace] = useState(false) // Se actualizará en el useEffect
   const [focusedThreadId, setFocusedThreadId] = useState<string | null>(null)
   const [visibleEmptyThreads, setVisibleEmptyThreads] = useState<Set<string>>(new Set())
+  const [viabilizacionData, setViabilizacionData] = useState<ViabilizacionFormData | null>(null)
+  const [isViabilizacionDialogOpen, setIsViabilizacionDialogOpen] = useState(false)
 
   // Datos de viajes
   const travelCards: TravelCard[] = [
@@ -158,6 +160,7 @@ export default function Home() {
     { id: "beneficiarios", title: "Beneficiarios", viabilizacionStatus: null, messages: [] },
     { id: "gastos", title: "Gastos", viabilizacionStatus: null, messages: [] },
     { id: "viajes", title: "Viajes", viabilizacionStatus: null, messages: [] },
+    { id: "viabilizacion", title: "Viabilización", viabilizacionStatus: null, messages: [] },
   ]
 
   const {
@@ -183,8 +186,37 @@ export default function Home() {
     { id: "beneficiarios", label: "Beneficiarios", anchor: "beneficiarios" },
     { id: "gastos", label: "Gastos", anchor: "gastos" },
     { id: "viajes", label: "Viajes", anchor: "viajes" },
-    { id: "observaciones-generales", label: "Observaciones generales", anchor: "observaciones-generales" },
+    { id: "viabilizacion", label: "Viabilización", anchor: "viabilizacion" },
   ], [])
+
+  // Desglose de beneficiarios
+  const beneficiariosBreakdown = useMemo(() => {
+    const completos = BENEFICIARIOS.filter((b) => !b.isIncomplete && b.name)
+    const incompletos = BENEFICIARIOS.filter((b) => b.isIncomplete || !b.name)
+    
+    const hombresDeportistas = completos.filter(
+      (b) => b.gender === "Hombre" && b.role === "Deportista"
+    ).length
+    const mujeresDeportistas = completos.filter(
+      (b) => b.gender === "Mujer" && b.role === "Deportista"
+    ).length
+    const hombresStaff = completos.filter(
+      (b) => b.gender === "Hombre" && b.role === "Técnico/Staff"
+    ).length
+    const mujeresStaff = completos.filter(
+      (b) => b.gender === "Mujer" && b.role === "Técnico/Staff"
+    ).length
+
+    return {
+      total: BENEFICIARIOS.length,
+      completos: completos.length,
+      incompletos: incompletos.length,
+      hombresDeportistas,
+      mujeresDeportistas,
+      hombresStaff,
+      mujeresStaff,
+    }
+  }, [])
 
   const blockOptions = blocks.map((block) => ({
     id: block.id,
@@ -227,17 +259,21 @@ export default function Home() {
     const stored = getBeneficiariosViabilizacion()
     setBeneficiariosViabilizacion(stored)
 
-    const storedObservaciones = localStorage.getItem(STORAGE_KEY)
-    if (storedObservaciones) {
-      setObservaciones(storedObservaciones)
+    const storedViabilizacion = localStorage.getItem("ado-viabilizacion-data")
+    if (storedViabilizacion) {
+      try {
+        setViabilizacionData(JSON.parse(storedViabilizacion))
+      } catch (e) {
+        console.error("Error parsing viabilizacion data", e)
+      }
     }
   }, [])
 
   useEffect(() => {
     if (isMounted) {
-      localStorage.setItem(STORAGE_KEY, observaciones)
+      localStorage.setItem("ado-viabilizacion-data", JSON.stringify(viabilizacionData))
     }
-  }, [observaciones, isMounted])
+  }, [viabilizacionData, isMounted])
 
   // Detectar ancho de pantalla para mostrar/ocultar threads
   useEffect(() => {
@@ -551,9 +587,25 @@ export default function Home() {
                         </div>
                       </CardHeader>
                       <CardContent className="flex flex-col gap-4 min-w-0">
-                        <p className="text-base font-semibold text-foreground leading-6">
-                          {BENEFICIARIOS.length} Beneficiarios
-                        </p>
+                        <div className="flex flex-col gap-2">
+                          <p className="text-base font-semibold text-foreground leading-6">
+                            {beneficiariosBreakdown.total} Beneficiarios
+                          </p>
+                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                            <span>
+                              {beneficiariosBreakdown.hombresDeportistas} hombres deportistas
+                            </span>
+                            <span>
+                              {beneficiariosBreakdown.mujeresDeportistas} mujeres deportistas
+                            </span>
+                            <span>
+                              {beneficiariosBreakdown.hombresStaff} hombres staff
+                            </span>
+                            <span>
+                              {beneficiariosBreakdown.mujeresStaff} mujeres staff
+                            </span>
+                          </div>
+                        </div>
                         <div className="border border-border rounded-md overflow-x-auto w-full min-w-0">
                           <Table className="w-full">
                             <TableHeader>
@@ -583,7 +635,8 @@ export default function Home() {
                             </TableHeader>
                             <TableBody>
                               {BENEFICIARIOS.map((row, idx) => {
-                                const beneficiarioStatus = beneficiariosViabilizacion[row.name] || null
+                                const isIncomplete = row.isIncomplete || !row.name
+                                const beneficiarioStatus = row.name ? beneficiariosViabilizacion[row.name] || null : null
                                 const getRowBackground = () => {
                                   if (beneficiarioStatus === "viabilizado") {
                                     return "bg-green-100 hover:!bg-green-100"
@@ -599,14 +652,20 @@ export default function Home() {
                                   <TableRow key={idx} className={cn("border-b", getRowBackground())}>
                                     <TableCell className="p-3 align-top whitespace-normal">
                                       <div className="flex flex-col gap-2">
-                                        <div>
-                                          <p className="text-sm font-semibold text-foreground leading-5">
-                                            {row.name}
+                                        {isIncomplete ? (
+                                          <p className="text-sm text-muted-foreground italic leading-5">
+                                            No se ha indicado quién es
                                           </p>
-                                          <p className="text-sm text-muted-foreground leading-5">
-                                            {row.modality}
-                                          </p>
-                                        </div>
+                                        ) : (
+                                          <div>
+                                            <p className="text-sm font-semibold text-foreground leading-5">
+                                              {row.name}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground leading-5">
+                                              {row.modality}
+                                            </p>
+                                          </div>
+                                        )}
                                       </div>
                                     </TableCell>
                                     <TableCell className="p-3 align-top whitespace-normal">
@@ -620,30 +679,50 @@ export default function Home() {
                                       </p>
                                     </TableCell>
                                     <TableCell className="p-3 align-top whitespace-normal">
-                                      <p className="text-sm text-foreground leading-5">
-                                        {row.nationality}
-                                      </p>
+                                      {isIncomplete ? (
+                                        <p className="text-sm text-muted-foreground italic leading-5">—</p>
+                                      ) : (
+                                        <p className="text-sm text-foreground leading-5">
+                                          {row.nationality}
+                                        </p>
+                                      )}
                                     </TableCell>
                                     <TableCell className="p-3 align-top whitespace-normal">
-                                      <p className="text-sm text-foreground leading-5">
-                                        {row.doc}
-                                      </p>
-                                      <p className="text-sm text-muted-foreground leading-5">
-                                        {row.docType}
-                                      </p>
+                                      {isIncomplete ? (
+                                        <p className="text-sm text-muted-foreground italic leading-5">—</p>
+                                      ) : (
+                                        <>
+                                          <p className="text-sm text-foreground leading-5">
+                                            {row.doc}
+                                          </p>
+                                          <p className="text-sm text-muted-foreground leading-5">
+                                            {row.docType}
+                                          </p>
+                                        </>
+                                      )}
                                     </TableCell>
                                     <TableCell className="p-3 align-top whitespace-normal">
-                                      <p className="text-sm text-foreground leading-5">
-                                        {row.birthDate}
-                                      </p>
+                                      {isIncomplete ? (
+                                        <p className="text-sm text-muted-foreground italic leading-5">—</p>
+                                      ) : (
+                                        <p className="text-sm text-foreground leading-5">
+                                          {row.birthDate}
+                                        </p>
+                                      )}
                                     </TableCell>
                                     <TableCell className="p-3 align-top whitespace-normal">
-                                      <p className="text-sm text-foreground leading-5">
-                                        {row.phone}
-                                      </p>
-                                      <p className="text-sm text-muted-foreground leading-5">
-                                        {row.email}
-                                      </p>
+                                      {isIncomplete ? (
+                                        <p className="text-sm text-muted-foreground italic leading-5">—</p>
+                                      ) : (
+                                        <>
+                                          <p className="text-sm text-foreground leading-5">
+                                            {row.phone}
+                                          </p>
+                                          <p className="text-sm text-muted-foreground leading-5">
+                                            {row.email}
+                                          </p>
+                                        </>
+                                      )}
                                     </TableCell>
                                   </TableRow>
                                 )
@@ -965,31 +1044,32 @@ export default function Home() {
 
             <Separator className="w-full" />
 
-            {/* Sección: Observaciones generales */}
-            <section id="observaciones-generales" className="flex flex-col gap-10 items-start w-full scroll-mt-20 pb-20">
+            {/* Sección: Viabilización */}
+            <section id="viabilizacion" className="flex flex-col gap-10 items-start w-full scroll-mt-20">
               <div className="flex items-center px-0 py-3 w-full">
                 <h2 className="text-2xl font-medium text-foreground leading-8">
-                  Observaciones generales
+                  Viabilización
                 </h2>
               </div>
-              <div className="flex flex-col gap-3 items-start w-full">
-                <Card className="relative gap-6 w-full max-w-[600px]">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold leading-7">
-                      Observaciones generales
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <Textarea
-                      value={observaciones}
-                      onChange={(e) => setObservaciones(e.target.value)}
-                      placeholder="Escribe tus observaciones generales aquí..."
-                      className="min-h-[200px]"
-                    />
-                  </CardContent>
-                </Card>
+              <div className="flex gap-4 items-start justify-between w-full">
+                <div className="flex-1 w-full max-w-[920px] min-w-0">
+                  <ViabilizacionBlock
+                    data={viabilizacionData}
+                    onOpenForm={() => setIsViabilizacionDialogOpen(true)}
+                    sectionComments={blocks
+                      .filter((block) => block.messages.length > 0)
+                      .map((block) => ({
+                        sectionId: block.id,
+                        sectionTitle: block.title,
+                        messages: block.messages,
+                      }))}
+                  />
+                </div>
               </div>
             </section>
+
+            <Separator className="w-full" />
+
           </div>
         </main>
 
@@ -1022,6 +1102,48 @@ export default function Home() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <ViabilizacionFormDialog
+          open={isViabilizacionDialogOpen}
+          onOpenChange={setIsViabilizacionDialogOpen}
+          initialData={viabilizacionData}
+          onSave={setViabilizacionData}
+          activitySummary={{
+            nombre: sobreActividadFields.find((f) => f.label === "Nombre de la actividad")?.value as string || "",
+            lugar: (() => {
+              const ciudad = sobreActividadFields.find((f) => f.label === "Ciudad")?.value as string || ""
+              const pais = sobreActividadFields.find((f) => f.label === "País")?.value as string || ""
+              return [ciudad, pais].filter(Boolean).join(", ") || "No especificado"
+            })(),
+            fecha: sobreActividadFields.find((f) => f.label === "Fechas de inicio y fin")?.value as string || "",
+            beneficiariosBreakdown,
+            criteriosSelectivos: (() => {
+              const criterios = sobreActividadFields.find((f) => f.label === "Criterios de selección")?.value
+              if (typeof criterios === "string") return [criterios]
+              if (React.isValidElement(criterios)) {
+                const props = criterios.props as { children?: React.ReactNode }
+                const text = props.children
+                if (Array.isArray(text)) {
+                  return text
+                    .filter((t): t is string => typeof t === "string")
+                    .map((t) => t.trim())
+                }
+                if (typeof text === "string") {
+                  return [text.trim()]
+                }
+              }
+              return []
+            })(),
+            basesTecnicas: sobreActividadFields.find((f) => f.label === "Bases")?.value as string || "Sin bases",
+          }}
+          sectionComments={blocks
+            .filter((block) => block.messages.length > 0)
+            .map((block) => ({
+              sectionId: block.id,
+              sectionTitle: block.title,
+              messages: block.messages,
+            }))}
+        />
       </div>
     </div>
   )
