@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MessageSquare, MoreVertical, Info } from "lucide-react"
+import { ArrowLeft, MessageSquare, MoreVertical, Info, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ViabilizacionSummaryDialog } from "@/components/composite/viabilizacion-summary-dialog"
+import { VersionHistorySheet } from "@/components/composite/version-history-sheet"
 
 interface PageHeaderProps {
   title: string | React.ReactNode
@@ -12,6 +13,14 @@ interface PageHeaderProps {
   onBack?: () => void
   rightActions?: React.ReactNode
   federacionName?: string
+  currentVersion?: string
+  versionHistory?: Array<{
+    version: string
+    fechaCreacion: string
+    fechaRespuesta?: string
+    viabilizacionResponse: "viabilizado" | "viabilizado-con-indicaciones" | "no-viabilizado" | null
+    isCurrent: boolean
+  }>
 }
 
 export function PageHeader({ 
@@ -19,9 +28,12 @@ export function PageHeader({
   backButtonText = "Proyectos",
   onBack,
   rightActions,
-  federacionName = "Atletismo"
+  federacionName = "Atletismo",
+  currentVersion = "V3",
+  versionHistory = []
 }: PageHeaderProps) {
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false)
 
   return (
     <header
@@ -51,10 +63,25 @@ export function PageHeader({
           )}
         </div>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsVersionHistoryOpen(true)}
+        className="gap-1.5"
+      >
+        <History className="size-4" />
+        <span>{currentVersion}</span>
+      </Button>
       {rightActions}
       <ViabilizacionSummaryDialog
         open={isSummaryDialogOpen}
         onOpenChange={setIsSummaryDialogOpen}
+      />
+      <VersionHistorySheet
+        open={isVersionHistoryOpen}
+        onOpenChange={setIsVersionHistoryOpen}
+        currentVersion={currentVersion}
+        versions={versionHistory}
       />
     </header>
   )

@@ -430,6 +430,36 @@ export default function Home() {
 
   const getBlock = (id: string) => blocks.find((b) => b.id === id)
 
+  // Datos mock del historial de versiones
+  const versionHistory = useMemo(() => [
+    {
+      version: "V3",
+      fechaCreacion: "15/01/2026",
+      viabilizacionResponse: null,
+      isCurrent: true,
+    },
+    {
+      version: "V2",
+      fechaCreacion: "10/01/2026",
+      fechaRespuesta: "12/01/2026",
+      viabilizacionResponse: "viabilizado-con-indicaciones",
+      isCurrent: false,
+    },
+    {
+      version: "V1",
+      fechaCreacion: "05/01/2026",
+      fechaRespuesta: "08/01/2026",
+      viabilizacionResponse: "no-viabilizado",
+      isCurrent: false,
+    },
+  ] as Array<{
+    version: string
+    fechaCreacion: string
+    fechaRespuesta?: string
+    viabilizacionResponse: "viabilizado" | "viabilizado-con-indicaciones" | "no-viabilizado" | null
+    isCurrent: boolean
+  }>, [])
+
   return (
     <div className="flex h-screen w-full flex-col">
       <PageHeader
@@ -441,6 +471,8 @@ export default function Home() {
         }
         backButtonText="Proyectos"
         onBack={() => router.push("/proyectos")}
+        currentVersion="V3"
+        versionHistory={versionHistory}
         rightActions={
           <>
             <motion.div
