@@ -125,19 +125,19 @@ export function ViabilizacionBlock({ data, onOpenForm, className, sectionComment
                     <p className="text-sm font-medium text-muted-foreground">
                         Rango de presupuesto aprobado
                     </p>
-                    <p className="text-base font-medium text-foreground">
+                    <p className="text-sm text-foreground">
                         {data.rangoPresupuesto === "pre-aprobado"
                             ? "Pre-aprobado por planilla"
                             : "Ajustado con jefatura"}
                     </p>
                     {data.rangoPresupuesto === "pre-aprobado" && (
-                        <p className="text-sm text-muted-foreground">
-                            Monto: $10.000.000
+                        <p className="text-base font-medium text-foreground">
+                            $10.000.000
                         </p>
                     )}
                     {data.rangoPresupuesto === "ajustado" && data.montoAprobado && (
-                        <p className="text-sm text-muted-foreground">
-                            Monto: {data.montoAprobado}
+                        <p className="text-base font-medium text-foreground">
+                            {data.montoAprobado}
                         </p>
                     )}
                 </div>
