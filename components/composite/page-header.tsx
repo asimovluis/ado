@@ -29,7 +29,7 @@ export function PageHeader({
   onBack,
   rightActions,
   federacionName = "Atletismo",
-  currentVersion = "V3",
+  currentVersion,
   versionHistory = []
 }: PageHeaderProps) {
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false)
@@ -63,15 +63,17 @@ export function PageHeader({
           )}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsVersionHistoryOpen(true)}
-        className="gap-1.5"
-      >
-        <History className="size-4" />
-        <span>{currentVersion}</span>
-      </Button>
+      {currentVersion && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsVersionHistoryOpen(true)}
+          className="gap-1.5"
+        >
+          <History className="size-4" />
+          <span>{currentVersion}</span>
+        </Button>
+      )}
       {rightActions}
       <ViabilizacionSummaryDialog
         open={isSummaryDialogOpen}

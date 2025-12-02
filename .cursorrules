@@ -1,4 +1,80 @@
+## Instrucciones
+
+El objetivo en esta rama es adaptar todo lo que tenemos hecho para un buen handoff a desarrollo.
+
+Actúa como un Arquitecto de Sistemas de Diseño experto en React, TypeScript, Tailwind CSS y el patrón de diseño de shadcn/ui.
+
+Tu objetivo es refactorizar el código de todos los componentes de este proyecto para convertirlos en "Snippets de Librería" listos para copiar y pegar.
+
 ---
+
+### REGLAS ESTRICTAS
+
+1. **Patrón de Componente Compuesto (Compound Component)**
+   - Descompón los componentes monolíticos en sub-componentes modulares (ej: `Root`, `Header`, `Title`, `Content`, `Footer`, `Action`, etc.).
+   - Prefiere composición explícita vía children en lugar de props de configuración complejas (arrays de objetos, estructuras anidadas). Solo usa props como `items` cuando realmente simplifiquen el uso sin meter lógica de negocio.
+   - Usa `React.ComponentProps<"div">` (o el elemento HTML correspondiente) para extender las props nativas.
+   - Mantén la API de los componentes consistente con el estilo de shadcn/ui.
+
+2. **Encapsulamiento de estilos y patrón shadcn**
+   - Toda la lógica de estilos (clases de Tailwind) debe vivir DENTRO de la definición del componente usando `cn()`.
+   - Si el componente tiene variantes (size, variant, intent, etc.), define las clases con `cva` y `VariantProps` como en los componentes de shadcn/ui.
+   - Siempre acepta `className` en los componentes y combínalo con `cn()` para permitir extensiones.
+   - El ejemplo de uso debe verse limpio y semántico, sin largas cadenas de clases CSS: los estilos van en los componentes, no en el uso.
+   - No uses estilos inline.
+
+3. **Cero lógica de negocio (solo lógica de UI mínima)**
+   - Elimina `useEffect`, llamadas a APIs, hooks de datos, stores, contextos de dominio y cualquier lógica específica del proyecto.
+   - No implementes reglas de negocio (flujos, estados de viabilización, roles, permisos, validaciones custom del dominio, etc.).
+   - Solo se permite lógica de UI mínima (por ejemplo: `open/close`, pestaña seleccionada), idealmente:
+     - Controlable mediante props (`open`, `defaultOpen`, `onOpenChange`, etc.).
+     - O delegada a componentes de shadcn/ui que ya resuelven esa interactividad.
+   - El componente debe ser principalmente visual y recibir datos vía props o children.
+
+4. **Separación de átomos y componentes reutilizables**
+   - Si el componente utiliza elementos repetibles (como `Item`, `Field`, `Row`, etc.), defínelos como sub-componentes exportables del compound principal, o como componentes independientes de la librería.
+   - No mezcles lógica de layout genérico con contenido de dominio. Los textos específicos del negocio NO deben quedar hardcodeados en los componentes de librería.
+
+5. **Accesibilidad y semántica**
+   - Usa elementos HTML semánticos correctos (`button`, `label`, `input`, `nav`, etc.).
+   - Mantén o agrega atributos `aria-*` cuando corresponda, siguiendo el estilo y patrones de accesibilidad de shadcn/ui.
+   - Asegúrate de que los componentes se puedan usar en contextos accesibles (por ejemplo, inputs controlables, labels asociados, etc.).
+
+6. **Formato de salida por componente**
+   Genera un único bloque de código que contenga:
+   - **SECCIÓN 1:** Definición del componente (o componentes) usando el patrón de exportación `function Component({ className, ...props })` y/o el compound component (`Component.Root`, `Component.Item`, etc.), usando `cn()` y `cva` cuando aplique.
+   - **SECCIÓN 2:** Un "Ejemplo de Uso" realista que demuestre cómo componer y orquestar los sub-componentes de manera limpia y genérica (sin textos ni datos del dominio específico del proyecto).
+
+---
+
+### Página de documentación `/libreria-proyecto`
+
+Genera una página que se llame `"libreria-proyecto"` con el siguiente layout y funcionalidad:
+
+- **Layout general**
+  - Un `sidebar` con todos los componentes ordenados alfabéticamente.
+  - Categorización de cada componente en:
+    - `shadcn` (componentes base o wrappers sobre la librería original).
+    - `custom` (componentes creados o extendidos para este proyecto, pero aún genéricos).
+    - Un ítem adicional para describir los **estilos globales** usados (tipografías, colores, spacings, etc.).
+
+- **Contenido principal**
+  - Para cada componente, mostrar 2 vistas alternativas:
+    - `Preview`: una previsualización del componente con un ejemplo simple pero representativo.
+    - `Code`: el snippet con el código limpio del componente (SECCIÓN 1 + SECCIÓN 2) para que el desarrollador lo vea y pueda copiarlo.
+  - Usa `react-syntax-highlighter` para la apariencia del código en los snippets.
+  - Incluye un botón de "Copiar" en la vista `Code` para facilitar el handoff a desarrollo.
+
+- La navegación debe permitir seleccionar un componente desde el sidebar y actualizar el contenido de Preview/Code en el área principal sin recargar toda la página.
+
+
+
+
+
+
+
+
+<!-- ---
 description: Reglas 80/20 para construir front-end con Shadcn + React + Tailwind usando diseños de Figma vía MCP (sin estilos inline, con tokens)
 globs:
   - "src/**/*.{tsx,ts,js}"
@@ -155,4 +231,4 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 - Props públicas mínimas; preferir composición (`children`).  
 - Añadir JSDoc breve en componentes compuestos.
 
----
+--- -->

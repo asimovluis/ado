@@ -18,7 +18,7 @@ export interface VersionHistoryItem {
 interface VersionHistorySheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  currentVersion: string
+  currentVersion?: string
   versions: VersionHistoryItem[]
 }
 
