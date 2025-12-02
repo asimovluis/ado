@@ -126,7 +126,7 @@ FormCardContent.displayName = "FormCardContent"
 
 const FormCardField = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
+  Omit<HTMLMotionProps<"div">, "ref"> & {
     index?: number
   }
 >(({ className, index = 0, children, ...props }, ref) => {

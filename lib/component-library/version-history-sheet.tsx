@@ -9,7 +9,7 @@ export type ViabilizacionResponse = "viabilizado" | "viabilizado-con-indicacione
 const VersionHistorySheetRoot = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof Sheet>
->(({ className, ...props }, ref) => {
+>((props, ref) => {
   return <Sheet {...props} />
 })
 VersionHistorySheetRoot.displayName = "VersionHistorySheetRoot"

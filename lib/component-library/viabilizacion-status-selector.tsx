@@ -42,10 +42,12 @@ const ViabilizacionStatusSelectorRoot = React.forwardRef<
 })
 ViabilizacionStatusSelectorRoot.displayName = "ViabilizacionStatusSelectorRoot"
 
+type VariantType = "viabilizado" | "pre-viabilizado" | "no-viabilizado" | "default"
+
 const ViabilizacionStatusSelectorButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<typeof Button> & {
-    variant?: "viabilizado" | "pre-viabilizado" | "no-viabilizado" | "default"
+    variant?: VariantType
     iconVariant?: "viabilizado" | "pre-viabilizado" | "no-viabilizado"
     hideLabel?: boolean
   }
@@ -63,13 +65,14 @@ const ViabilizacionStatusSelectorButton = React.forwardRef<
     return null
   }
 
-  const iconClass = variant === "viabilizado" 
-    ? "text-primary-foreground"
-    : variant === "pre-viabilizado"
-    ? "text-[var(--teal-700)]"
-    : variant === "no-viabilizado"
-    ? "text-amber-600"
-    : "text-foreground"
+  const getIconClass = (v: VariantType): string => {
+    if (v === "viabilizado") return "text-primary-foreground"
+    if (v === "pre-viabilizado") return "text-[var(--teal-700)]"
+    if (v === "no-viabilizado") return "text-amber-600"
+    return "text-foreground"
+  }
+  
+  const iconClass = getIconClass(variant)
 
   return (
     <Button

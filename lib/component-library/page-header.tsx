@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const PageHeaderRoot = React.forwardRef<
-  HTMLHeaderElement,
+  HTMLElement,
   React.ComponentProps<"header">
 >(({ className, ...props }, ref) => {
   return (
