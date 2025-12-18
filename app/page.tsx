@@ -18,7 +18,10 @@ import { AgregarDocumentoModal } from "@/components/composite/agregar-documento-
 import { GastoDetailPanel } from "@/components/composite/gasto-detail-panel"
 import { AgregarGrupoDialog } from "@/components/composite/agregar-grupo-dialog"
 import { MoverActividadDialog } from "@/components/composite/mover-actividad-dialog"
+import { CrearViaticoModal } from "@/components/composite/crear-viatico-modal"
 import { proyectos, actividades } from "@/lib/data/actividades-db"
+import { beneficiariosDisponibles } from "@/lib/data/viaticos-db"
+import type { Viatico } from "@/lib/data/viaticos-db"
 
 interface Aclaracion {
   id: string
@@ -44,6 +47,15 @@ interface Gasto {
   cantidad: number
   costoTotal: number
   estado: "incompleto" | "listo"
+  // Información de viático si este gasto es un viático
+  esViatico?: boolean
+  viaticoId?: string
+  // Información si este gasto es parte de un viático
+  parteDeViaticos?: Array<{
+    viaticoId: string
+    nombreViatico: string
+    cantidadUsada: number
+  }>
   documentosRequeridos: Array<{
     id: string
     nombre: string
@@ -335,6 +347,10 @@ export default function RendicionesPage() {
   const [isAgregarGrupoOpen, setIsAgregarGrupoOpen] = useState(false)
   const [isMoverActividadOpen, setIsMoverActividadOpen] = useState(false)
   const [actividadAMover, setActividadAMover] = useState<{ nombre: string; gastos: Gasto[] } | null>(null)
+  
+  // Estado para viáticos
+  const [viaticos, setViaticos] = useState<Viatico[]>([])
+  const [isCrearViaticoOpen, setIsCrearViaticoOpen] = useState(false)
 
   const grupoActual = grupos.find((g) => g.id === selectedGrupo)
   
@@ -442,6 +458,71 @@ export default function RendicionesPage() {
     setActividadAMover(null)
   }
 
+  // Función para manejar la creación de un viático
+  const handleGuardarViatico = (viaticoData: Omit<Viatico, "id" | "fechaCreacion">) => {
+    const nuevoViatico: Viatico = {
+      ...viaticoData,
+      id: `viatico-${Date.now()}`,
+      fechaCreacion: new Date().toISOString(),
+    }
+
+    // Agregar el viático a la lista
+    setViaticos(prev => [...prev, nuevoViatico])
+
+    // Crear un nuevo gasto de tipo "Viático" en el grupo actual
+    const nuevoGastoViatico: Gasto = {
+      id: `gasto-viatico-${Date.now()}`,
+      tipoGasto: "Viático",
+      descripcion: nuevoViatico.nombre,
+      actividad: "Viáticos", // Agrupamos todos los viáticos bajo esta actividad
+      costoUnitario: nuevoViatico.costoTotal,
+      cantidad: 1,
+      costoTotal: nuevoViatico.costoTotal,
+      estado: "listo",
+      esViatico: true,
+      viaticoId: nuevoViatico.id,
+      documentosRequeridos: [],
+    }
+
+    // Actualizar los gastos originales para marcarlos como parte del viático
+    setGrupos(prevGrupos => {
+      return prevGrupos.map(grupo => {
+        if (grupo.id === selectedGrupo) {
+          // Actualizar gastos existentes para indicar que son parte del viático
+          const gastosActualizados = grupo.gastos.map(gasto => {
+            const gastoEnViatico = nuevoViatico.gastos.find(gv => gv.gastoId === gasto.id)
+            if (gastoEnViatico) {
+              const parteDeViaticos = gasto.parteDeViaticos || []
+              return {
+                ...gasto,
+                parteDeViaticos: [
+                  ...parteDeViaticos,
+                  {
+                    viaticoId: nuevoViatico.id,
+                    nombreViatico: nuevoViatico.nombre,
+                    cantidadUsada: gastoEnViatico.cantidadSeleccionada,
+                  },
+                ],
+              }
+            }
+            return gasto
+          })
+
+          // Agregar el nuevo gasto de viático
+          const nuevosGastos = [...gastosActualizados, nuevoGastoViatico]
+          
+          return {
+            ...grupo,
+            gastos: nuevosGastos,
+            cantidadGastos: nuevosGastos.length,
+            cantidadActividades: new Set(nuevosGastos.map(g => g.actividad)).size,
+          }
+        }
+        return grupo
+      })
+    })
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-background">
       <PageHeader
@@ -491,19 +572,29 @@ export default function RendicionesPage() {
           <div className="flex-1 flex flex-col overflow-y-auto gap-10">
             {/* Header sticky */}
             <div className="bg-background sticky top-0 z-10 flex flex-col gap-4 p-4 pb-0 border-b">
-              <div className="flex items-center gap-5">
-                <h2 className="text-2xl font-medium">Gastos</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {gastosListos}/{totalGastos} listos
-                  </span>
-                  <div className="bg-slate-300 h-2 w-20 rounded-full overflow-hidden">
-                    <div
-                      className="bg-teal-700 h-full transition-all"
-                      style={{ width: `${progreso}%` }}
-                    />
+              <div className="flex items-center gap-5 justify-between">
+                <div className="flex items-center gap-5">
+                  <h2 className="text-2xl font-medium">Gastos</h2>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {gastosListos}/{totalGastos} listos
+                    </span>
+                    <div className="bg-slate-300 h-2 w-20 rounded-full overflow-hidden">
+                      <div
+                        className="bg-teal-700 h-full transition-all"
+                        style={{ width: `${progreso}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
+                <Button
+                  variant="default"
+                  className="gap-2"
+                  onClick={() => setIsCrearViaticoOpen(true)}
+                >
+                  <Plus className="size-4" />
+                  Agregar un viático
+                </Button>
               </div>
 
               {/* Toggles de meses */}
@@ -629,15 +720,27 @@ export default function RendicionesPage() {
                         <div className="flex-1 flex gap-2 min-w-[200px] p-3">
                           <div className="flex-1 flex flex-col gap-1">
                             <h4 className="text-base font-semibold">{gasto.tipoGasto}</h4>
-                            <Badge
-                              variant={gasto.estado === "listo" ? "default" : "outline"}
-                              className={cn(
-                                "w-fit",
-                                gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant={gasto.estado === "listo" ? "default" : "outline"}
+                                className={cn(
+                                  "w-fit",
+                                  gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                                )}
+                              >
+                                {gasto.estado === "listo" ? "Listo" : "Incompleto"}
+                              </Badge>
+                              {gasto.esViatico && (
+                                <Badge variant="secondary" className="w-fit bg-purple-100 text-purple-700 border-purple-200">
+                                  Viático
+                                </Badge>
                               )}
-                            >
-                              {gasto.estado === "listo" ? "Listo" : "Incompleto"}
-                            </Badge>
+                              {gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0 && (
+                                <Badge variant="outline" className="w-fit border-purple-300 text-purple-700">
+                                  Parte de {gasto.parteDeViaticos.length} viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-foreground line-clamp-2">
                               {gasto.descripcion}
                             </p>
@@ -1209,6 +1312,15 @@ export default function RendicionesPage() {
           onMover={handleMoverActividad}
         />
       )}
+
+      {/* Modal para crear viático */}
+      <CrearViaticoModal
+        open={isCrearViaticoOpen}
+        onOpenChange={setIsCrearViaticoOpen}
+        gastosDisponibles={grupoActual?.gastos.filter(g => !g.esViatico) || []}
+        beneficiariosDisponibles={beneficiariosDisponibles}
+        onGuardar={handleGuardarViatico}
+      />
     </div>
   )
 }
