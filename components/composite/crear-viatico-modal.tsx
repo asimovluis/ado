@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { FullPageModal, FullPageModalContent } from "@/components/ui/full-page-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -138,8 +138,8 @@ export function CrearViaticoModal({
   }, [open])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-full h-screen max-h-screen p-0 gap-0">
+    <FullPageModal open={open} onOpenChange={onOpenChange}>
+      <FullPageModalContent className="p-0 gap-0" showCloseButton={false}>
         {/* Header */}
         <div className="bg-background border-b border-border flex items-center justify-between p-4">
           <h2 className="text-base font-semibold">Nuevo viático</h2>
@@ -429,8 +429,8 @@ export function CrearViaticoModal({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </FullPageModalContent>
+    </FullPageModal>
   )
 }
 
