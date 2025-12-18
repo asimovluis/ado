@@ -523,6 +523,54 @@ export default function RendicionesPage() {
     })
   }
 
+  // Función para eliminar un viático y devolver los gastos a su estado inicial
+  const handleEliminarViatico = (viaticoId: string) => {
+    const viatico = viaticos.find(v => v.id === viaticoId)
+    if (!viatico) return
+
+    // Eliminar el viático de la lista
+    setViaticos(prev => prev.filter(v => v.id !== viaticoId))
+
+    // Actualizar los grupos para:
+    // 1. Eliminar el gasto de viático
+    // 2. Remover la referencia del viático de los gastos originales
+    setGrupos(prevGrupos => {
+      return prevGrupos.map(grupo => {
+        if (grupo.id === selectedGrupo) {
+          // Eliminar el gasto de viático
+          const gastosSinViatico = grupo.gastos.filter(g => !(g.esViatico && g.viaticoId === viaticoId))
+
+          // Remover la referencia del viático de los gastos originales
+          const gastosActualizados = gastosSinViatico.map(gasto => {
+            if (gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0) {
+              const parteDeViaticosActualizado = gasto.parteDeViaticos.filter(
+                p => p.viaticoId !== viaticoId
+              )
+              return {
+                ...gasto,
+                parteDeViaticos: parteDeViaticosActualizado.length > 0 ? parteDeViaticosActualizado : undefined,
+              }
+            }
+            return gasto
+          })
+
+          // Si el gasto seleccionado es el viático que se está eliminando, cerrar el panel
+          if (selectedGasto?.esViatico && selectedGasto.viaticoId === viaticoId) {
+            setSelectedGasto(null)
+          }
+
+          return {
+            ...grupo,
+            gastos: gastosActualizados,
+            cantidadGastos: gastosActualizados.length,
+            cantidadActividades: new Set(gastosActualizados.map(g => g.actividad)).size,
+          }
+        }
+        return grupo
+      })
+    })
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-background">
       <PageHeader
@@ -704,64 +752,135 @@ export default function RendicionesPage() {
                   </div>
 
                   <div className="flex flex-col border-t">
-                    {gastos.map((gasto, index) => (
-                      <button
-                        key={gasto.id}
-                        onClick={() => setSelectedGasto(gasto)}
-                        className={cn(
-                          "flex gap-4 items-start p-2 border-b transition-colors text-left",
-                          selectedGasto?.id === gasto.id
-                            ? "bg-accent"
-                            : index === 0 && selectedGasto === null
-                            ? "bg-accent"
-                            : "hover:bg-muted/50"
-                        )}
-                      >
-                        <div className="flex-1 flex gap-2 min-w-[200px] p-3">
-                          <div className="flex-1 flex flex-col gap-1">
-                            <h4 className="text-base font-semibold">{gasto.tipoGasto}</h4>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge
-                                variant={gasto.estado === "listo" ? "default" : "outline"}
-                                className={cn(
-                                  "w-fit",
-                                  gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                    {gastos.map((gasto, index) => {
+                      const esParteDeViaticos = gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0
+                      const esViatico = gasto.esViatico
+                      const puedeInteractuar = !esParteDeViaticos
+
+                      return (
+                        <div
+                          key={gasto.id}
+                          className={cn(
+                            "flex gap-4 items-start p-2 border-b transition-colors",
+                            !puedeInteractuar && "opacity-60 cursor-not-allowed",
+                            puedeInteractuar && "cursor-pointer hover:bg-muted/50",
+                            selectedGasto?.id === gasto.id && "bg-accent",
+                            index === 0 && selectedGasto === null && puedeInteractuar && "bg-accent"
+                          )}
+                          onClick={() => puedeInteractuar && setSelectedGasto(gasto)}
+                        >
+                          <div className="flex-1 flex gap-2 min-w-[200px] p-3">
+                            <div className="flex-1 flex flex-col gap-1">
+                              <h4 className={cn(
+                                "text-base font-semibold",
+                                esParteDeViaticos && "line-through text-muted-foreground"
+                              )}>
+                                {gasto.tipoGasto}
+                              </h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge
+                                  variant={gasto.estado === "listo" ? "default" : "outline"}
+                                  className={cn(
+                                    "w-fit",
+                                    gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                                  )}
+                                >
+                                  {gasto.estado === "listo" ? "Listo" : "Incompleto"}
+                                </Badge>
+                                {esViatico && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                                        <MoreVertical className="size-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-40 p-1" align="end">
+                                      <button
+                                        className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
+                                        onClick={() => {
+                                          if (gasto.viaticoId) {
+                                            handleEliminarViatico(gasto.viaticoId)
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="size-4" />
+                                        Eliminar viático
+                                      </button>
+                                    </PopoverContent>
+                                  </Popover>
                                 )}
-                              >
-                                {gasto.estado === "listo" ? "Listo" : "Incompleto"}
-                              </Badge>
-                              {gasto.esViatico && (
-                                <Badge variant="secondary" className="w-fit bg-purple-100 text-purple-700 border-purple-200">
-                                  Viático
-                                </Badge>
-                              )}
-                              {gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0 && (
-                                <Badge variant="outline" className="w-fit border-purple-300 text-purple-700">
-                                  Parte de {gasto.parteDeViaticos.length} viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}
-                                </Badge>
+                              </div>
+                              <p className={cn(
+                                "text-sm line-clamp-2",
+                                esParteDeViaticos ? "text-muted-foreground line-through" : "text-foreground"
+                              )}>
+                                {gasto.descripcion}
+                              </p>
+                              {esParteDeViaticos && gasto.parteDeViaticos && (
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Incluído en viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}:
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {gasto.parteDeViaticos.map((parte, idx) => (
+                                      <button
+                                        key={parte.viaticoId}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          // Buscar el gasto de viático correspondiente y seleccionarlo
+                                          const gastoViatico = grupoActual?.gastos.find(
+                                            g => g.esViatico && g.viaticoId === parte.viaticoId
+                                          )
+                                          if (gastoViatico) {
+                                            setSelectedGasto(gastoViatico)
+                                          }
+                                        }}
+                                        className="text-xs text-primary hover:underline"
+                                      >
+                                        {parte.nombreViatico}
+                                        {idx < (gasto.parteDeViaticos?.length || 0) - 1 && ","}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            <p className="text-sm text-foreground line-clamp-2">
-                              {gasto.descripcion}
+                          </div>
+                          <div className="flex-1 flex items-center justify-center p-3">
+                            <p className={cn(
+                              "text-sm",
+                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
+                            )}>
+                              {gasto.actividad}
+                            </p>
+                          </div>
+                          <div className="flex-1 flex items-center justify-end p-3">
+                            <p className={cn(
+                              "text-sm",
+                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
+                            )}>
+                              {formatCurrency(gasto.costoUnitario)}
+                            </p>
+                          </div>
+                          <div className="w-16 flex items-center justify-end p-3">
+                            <p className={cn(
+                              "text-sm",
+                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
+                            )}>
+                              {gasto.cantidad}
+                            </p>
+                          </div>
+                          <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
+                            <p className={cn(
+                              "text-sm font-medium",
+                              esParteDeViaticos ? "text-muted-foreground line-through" : ""
+                            )}>
+                              {formatCurrency(gasto.costoTotal)}
                             </p>
                           </div>
                         </div>
-                        <div className="flex-1 flex items-center justify-center p-3">
-                          <p className="text-sm text-muted-foreground">{gasto.actividad}</p>
-                        </div>
-                        <div className="flex-1 flex items-center justify-end p-3">
-                          <p className="text-sm text-muted-foreground">
-                            {formatCurrency(gasto.costoUnitario)}
-                          </p>
-                        </div>
-                        <div className="w-16 flex items-center justify-end p-3">
-                          <p className="text-sm text-muted-foreground">{gasto.cantidad}</p>
-                        </div>
-                        <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
-                          <p className="text-sm font-medium">{formatCurrency(gasto.costoTotal)}</p>
-                        </div>
-                      </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               ))}
