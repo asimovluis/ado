@@ -13,6 +13,7 @@ export interface GastoViatico {
   tipoGasto: string
   descripcion: string
   actividad: string
+  federacion: string
   cantidadSeleccionada: number
   cantidadMaxima: number
   costoUnitario: number

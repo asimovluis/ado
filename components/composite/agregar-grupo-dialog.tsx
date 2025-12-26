@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronRight, ChevronDown } from "lucide-react"
+import { ChevronRight, ChevronDown, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Proyecto, Actividad } from "@/lib/data/actividades-db"
 
@@ -18,6 +18,9 @@ interface AgregarGrupoDialogProps {
   onSave: (nombre: string, actividadIds: string[]) => void
 }
 
+// ID especial para equipamientos
+const EQUIPAMIENTOS_ID = "equipamientos"
+
 export function AgregarGrupoDialog({
   open,
   onOpenChange,
@@ -27,22 +30,91 @@ export function AgregarGrupoDialog({
 }: AgregarGrupoDialogProps) {
   const [nombreGrupo, setNombreGrupo] = React.useState("")
   const [selectedActividades, setSelectedActividades] = React.useState<Set<string>>(new Set())
-  const [expandedProyectos, setExpandedProyectos] = React.useState<Set<string>>(new Set())
+  const [selectedEquipamientos, setSelectedEquipamientos] = React.useState<Set<string>>(new Set())
+  const [expandedFederaciones, setExpandedFederaciones] = React.useState<Set<string>>(new Set())
+  const [expandedAnos, setExpandedAnos] = React.useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = React.useState("")
 
-  const actividadesPorProyecto = React.useMemo(() => {
-    return proyectos.map(proyecto => ({
-      proyecto,
-      actividades: actividades.filter(a => a.proyectoId === proyecto.id)
-    }))
+  // Agrupar por Federación > Año > Actividades
+  const estructuraJerarquica = React.useMemo(() => {
+    const federacionesMap = new Map<string, {
+      federacion: string
+      anos: Map<number, {
+        año: number
+        actividades: Actividad[]
+        proyecto: Proyecto | null
+      }>
+    }>()
+
+    actividades.forEach(actividad => {
+      const proyecto = proyectos.find(p => p.id === actividad.proyectoId)
+      if (!proyecto) return
+
+      if (!federacionesMap.has(actividad.federacion)) {
+        federacionesMap.set(actividad.federacion, {
+          federacion: actividad.federacion,
+          anos: new Map()
+        })
+      }
+
+      const federacionData = federacionesMap.get(actividad.federacion)!
+      
+      if (!federacionData.anos.has(proyecto.año)) {
+        federacionData.anos.set(proyecto.año, {
+          año: proyecto.año,
+          actividades: [],
+          proyecto: proyecto
+        })
+      }
+
+      federacionData.anos.get(proyecto.año)!.actividades.push(actividad)
+    })
+
+    // Convertir a array y ordenar
+    return Array.from(federacionesMap.values()).map(fed => ({
+      ...fed,
+      anos: Array.from(fed.anos.values()).sort((a, b) => b.año - a.año)
+    })).sort((a, b) => a.federacion.localeCompare(b.federacion))
   }, [proyectos, actividades])
 
-  const toggleProyecto = (proyectoId: string) => {
-    setExpandedProyectos(prev => {
+  // Filtrar según búsqueda
+  const estructuraFiltrada = React.useMemo(() => {
+    if (!searchQuery.trim()) return estructuraJerarquica
+
+    const query = searchQuery.toLowerCase()
+    return estructuraJerarquica.map(fed => ({
+      ...fed,
+      anos: fed.anos.map(ano => ({
+        ...ano,
+        actividades: ano.actividades.filter(act => 
+          act.nombre.toLowerCase().includes(query) ||
+          fed.federacion.toLowerCase().includes(query) ||
+          ano.año.toString().includes(query)
+        )
+      })).filter(ano => ano.actividades.length > 0)
+    })).filter(fed => fed.anos.length > 0)
+  }, [estructuraJerarquica, searchQuery])
+
+  const toggleFederacion = (federacion: string) => {
+    setExpandedFederaciones(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(proyectoId)) {
-        newSet.delete(proyectoId)
+      if (newSet.has(federacion)) {
+        newSet.delete(federacion)
       } else {
-        newSet.add(proyectoId)
+        newSet.add(federacion)
+      }
+      return newSet
+    })
+  }
+
+  const toggleAno = (federacion: string, año: number) => {
+    const key = `${federacion}-${año}`
+    setExpandedAnos(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(key)) {
+        newSet.delete(key)
+      } else {
+        newSet.add(key)
       }
       return newSet
     })
@@ -60,29 +132,58 @@ export function AgregarGrupoDialog({
     })
   }
 
-  const toggleProyectoCompleto = (proyectoId: string, actividadIds: string[]) => {
+  const toggleEquipamientos = (federacion: string, año: number) => {
+    const key = `${federacion}-${año}-equipamientos`
+    setSelectedEquipamientos(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(key)) {
+        newSet.delete(key)
+      } else {
+        newSet.add(key)
+      }
+      return newSet
+    })
+  }
+
+  const toggleAnoCompleto = (federacion: string, año: number, actividadIds: string[]) => {
     const todasSeleccionadas = actividadIds.length > 0 && 
       actividadIds.every(id => selectedActividades.has(id))
+    const equipamientosSeleccionados = selectedEquipamientos.has(`${federacion}-${año}-equipamientos`)
+    const todoSeleccionado = todasSeleccionadas && equipamientosSeleccionados
     
     setSelectedActividades(prev => {
       const newSet = new Set(prev)
-      if (todasSeleccionadas) {
-        // Deseleccionar todas
+      if (todoSeleccionado) {
         actividadIds.forEach(id => newSet.delete(id))
       } else {
-        // Seleccionar todas
         actividadIds.forEach(id => newSet.add(id))
+      }
+      return newSet
+    })
+    
+    setSelectedEquipamientos(prev => {
+      const newSet = new Set(prev)
+      if (todoSeleccionado) {
+        newSet.delete(`${federacion}-${año}-equipamientos`)
+      } else {
+        newSet.add(`${federacion}-${año}-equipamientos`)
       }
       return newSet
     })
   }
 
   const handleSave = () => {
-    if (nombreGrupo.trim() && selectedActividades.size > 0) {
-      onSave(nombreGrupo.trim(), Array.from(selectedActividades))
+    const totalSeleccionado = selectedActividades.size + selectedEquipamientos.size
+    if (nombreGrupo.trim() && totalSeleccionado > 0) {
+      // Combinar actividades seleccionadas con equipamientos
+      const todosIds = Array.from(selectedActividades)
+      onSave(nombreGrupo.trim(), todosIds)
       setNombreGrupo("")
       setSelectedActividades(new Set())
-      setExpandedProyectos(new Set())
+      setSelectedEquipamientos(new Set())
+      setExpandedFederaciones(new Set())
+      setExpandedAnos(new Set())
+      setSearchQuery("")
       onOpenChange(false)
     }
   }
@@ -90,7 +191,10 @@ export function AgregarGrupoDialog({
   const handleCancel = () => {
     setNombreGrupo("")
     setSelectedActividades(new Set())
-    setExpandedProyectos(new Set())
+    setSelectedEquipamientos(new Set())
+    setExpandedFederaciones(new Set())
+    setExpandedAnos(new Set())
+    setSearchQuery("")
     onOpenChange(false)
   }
 
@@ -99,18 +203,221 @@ export function AgregarGrupoDialog({
     if (!open) {
       setNombreGrupo("")
       setSelectedActividades(new Set())
-      setExpandedProyectos(new Set())
+      setSelectedEquipamientos(new Set())
+      setExpandedFederaciones(new Set())
+      setExpandedAnos(new Set())
+      setSearchQuery("")
     }
   }, [open])
 
+  // Expandir automáticamente cuando hay búsqueda
+  React.useEffect(() => {
+    if (searchQuery.trim()) {
+      // Expandir todas las federaciones que tienen resultados
+      const federacionesConResultados = new Set<string>()
+      const anosConResultados = new Set<string>()
+      
+      estructuraFiltrada.forEach(fed => {
+        federacionesConResultados.add(fed.federacion)
+        fed.anos.forEach(ano => {
+          anosConResultados.add(`${fed.federacion}-${ano.año}`)
+        })
+      })
+      
+      setExpandedFederaciones(federacionesConResultados)
+      setExpandedAnos(anosConResultados)
+    } else {
+      // Si no hay búsqueda, colapsar todo
+      setExpandedFederaciones(new Set())
+      setExpandedAnos(new Set())
+    }
+  }, [searchQuery, estructuraFiltrada])
+
+  const totalSeleccionado = selectedActividades.size + selectedEquipamientos.size
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent 
+        className="max-w-2xl h-[80vh] overflow-hidden flex flex-col"
+        onEscapeKeyDown={(e) => {
+          // Si el input de búsqueda tiene focus, prevenir el cierre del dialog
+          if (searchInputRef.current === document.activeElement) {
+            e.preventDefault()
+            setSearchQuery("")
+            searchInputRef.current?.blur()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Agregar un grupo</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
+          {/* Buscador */}
+          <div className="flex flex-col gap-2">
+            <Label>Buscar</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Buscar"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setSearchQuery("")
+                    e.currentTarget.blur()
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }
+                }}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Árbol jerárquico */}
+          <div className="flex flex-col gap-2 flex-1 overflow-hidden">
+            <Label>Seleccionar actividades</Label>
+            <div className="border rounded-lg overflow-y-auto flex-1 p-2">
+              {estructuraFiltrada.map((federacionData) => {
+                const isFederacionExpanded = expandedFederaciones.has(federacionData.federacion)
+
+                return (
+                  <div key={federacionData.federacion} className="flex flex-col">
+                    {/* Nivel Federación */}
+                    <div className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm">
+                      <button
+                        onClick={() => toggleFederacion(federacionData.federacion)}
+                        className="shrink-0"
+                        type="button"
+                      >
+                        {isFederacionExpanded ? (
+                          <ChevronDown className="size-4" />
+                        ) : (
+                          <ChevronRight className="size-4" />
+                        )}
+                      </button>
+                      <span className="flex-1 text-sm font-medium">
+                        {federacionData.federacion}
+                      </span>
+                    </div>
+
+                    {isFederacionExpanded && (
+                      <div className="ml-6 flex flex-col">
+                        {federacionData.anos.map((anoData) => {
+                          const anoKey = `${federacionData.federacion}-${anoData.año}`
+                          const isAnoExpanded = expandedAnos.has(anoKey)
+                          const todasActividadesSeleccionadas = anoData.actividades.length > 0 && 
+                            anoData.actividades.every(a => selectedActividades.has(a.id))
+                          const algunasActividadesSeleccionadas = anoData.actividades.some(a => selectedActividades.has(a.id))
+                          const equipamientosSeleccionados = selectedEquipamientos.has(`${federacionData.federacion}-${anoData.año}-equipamientos`)
+                          const todoSeleccionado = todasActividadesSeleccionadas && equipamientosSeleccionados
+                          const algunasSeleccionadas = algunasActividadesSeleccionadas || equipamientosSeleccionados
+
+                          return (
+                            <div key={anoKey} className="flex flex-col">
+                              {/* Nivel Año */}
+                              <div className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleAno(federacionData.federacion, anoData.año)
+                                  }}
+                                  className="shrink-0"
+                                  type="button"
+                                >
+                                  {isAnoExpanded ? (
+                                    <ChevronDown className="size-4" />
+                                  ) : (
+                                    <ChevronRight className="size-4" />
+                                  )}
+                                </button>
+                                <div 
+                                  className="flex items-center gap-2 flex-1 cursor-pointer"
+                                  onClick={() => 
+                                    toggleAnoCompleto(
+                                      federacionData.federacion,
+                                      anoData.año,
+                                      anoData.actividades.map(a => a.id)
+                                    )
+                                  }
+                                >
+                                  <div className="relative">
+                                    <Checkbox
+                                      checked={todoSeleccionado}
+                                      onCheckedChange={() => 
+                                        toggleAnoCompleto(
+                                          federacionData.federacion,
+                                          anoData.año,
+                                          anoData.actividades.map(a => a.id)
+                                        )
+                                      }
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    {algunasSeleccionadas && !todoSeleccionado && (
+                                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="size-2 bg-primary rounded-sm" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="flex-1 text-sm font-medium">
+                                    {anoData.año}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {anoData.actividades.length} actividades
+                                  </span>
+                                </div>
+                              </div>
+
+                              {isAnoExpanded && (
+                                <div className="ml-6 flex flex-col">
+                                  {/* Actividades */}
+                                  {anoData.actividades.map((actividad) => (
+                                    <div
+                                      key={actividad.id}
+                                      className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
+                                      onClick={() => toggleActividad(actividad.id)}
+                                    >
+                                      <div className="w-4 shrink-0" />
+                                      <Checkbox
+                                        checked={selectedActividades.has(actividad.id)}
+                                        onCheckedChange={() => toggleActividad(actividad.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      <span className="flex-1 text-sm">{actividad.nombre}</span>
+                                    </div>
+                                  ))}
+                                  
+                                  {/* Equipamientos */}
+                                  <div 
+                                    className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm cursor-pointer"
+                                    onClick={() => toggleEquipamientos(federacionData.federacion, anoData.año)}
+                                  >
+                                    <div className="w-4 shrink-0" />
+                                    <Checkbox
+                                      checked={equipamientosSeleccionados}
+                                      onCheckedChange={() => toggleEquipamientos(federacionData.federacion, anoData.año)}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <span className="flex-1 text-sm">Equipamientos</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Input de nombre del grupo - movido abajo */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="nombre-grupo">Nombre del grupo</Label>
             <Input
@@ -120,74 +427,6 @@ export function AgregarGrupoDialog({
               placeholder="Ej: Proyecto 1 AR"
             />
           </div>
-
-          <div className="flex flex-col gap-2 flex-1 overflow-hidden">
-            <Label>Seleccionar actividades</Label>
-            <div className="border rounded-lg overflow-y-auto flex-1 p-2">
-              {actividadesPorProyecto.map(({ proyecto, actividades: proyectoActividades }) => {
-                const todasSeleccionadas = proyectoActividades.length > 0 && 
-                  proyectoActividades.every(a => selectedActividades.has(a.id))
-                const algunasSeleccionadas = proyectoActividades.some(a => selectedActividades.has(a.id))
-                const isExpanded = expandedProyectos.has(proyecto.id)
-
-                return (
-                  <div key={proyecto.id} className="flex flex-col">
-                    <div className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm">
-                      <button
-                        onClick={() => toggleProyecto(proyecto.id)}
-                        className="shrink-0"
-                        type="button"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="size-4" />
-                        ) : (
-                          <ChevronRight className="size-4" />
-                        )}
-                      </button>
-                      <div className="relative">
-                        <Checkbox
-                          checked={todasSeleccionadas}
-                          onCheckedChange={() => 
-                            toggleProyectoCompleto(proyecto.id, proyectoActividades.map(a => a.id))
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {algunasSeleccionadas && !todasSeleccionadas && (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="size-2 bg-primary rounded-sm" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="flex-1 text-sm font-medium">
-                        {proyecto.nombre}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {proyectoActividades.length} actividades
-                      </span>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="ml-6 flex flex-col">
-                        {proyectoActividades.map((actividad) => (
-                          <div
-                            key={actividad.id}
-                            className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm"
-                          >
-                            <div className="w-4 shrink-0" /> {/* Spacer para alineación */}
-                            <Checkbox
-                              checked={selectedActividades.has(actividad.id)}
-                              onCheckedChange={() => toggleActividad(actividad.id)}
-                            />
-                            <span className="flex-1 text-sm">{actividad.nombre}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
         </div>
 
         <DialogFooter>
@@ -196,7 +435,7 @@ export function AgregarGrupoDialog({
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={!nombreGrupo.trim() || selectedActividades.size === 0}
+            disabled={!nombreGrupo.trim() || totalSeleccionado === 0}
           >
             Guardar
           </Button>

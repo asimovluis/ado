@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RequisitoDocumentModal } from "@/components/composite/requisito-document-modal"
 import { PdfCompiladoModal } from "@/components/composite/pdf-compilado-modal"
@@ -19,6 +21,8 @@ import { GastoDetailPanel } from "@/components/composite/gasto-detail-panel"
 import { AgregarGrupoDialog } from "@/components/composite/agregar-grupo-dialog"
 import { MoverActividadDialog } from "@/components/composite/mover-actividad-dialog"
 import { CrearViaticoModal } from "@/components/composite/crear-viatico-modal"
+import { DetallesViaticoModal } from "@/components/composite/detalles-viatico-modal"
+import { InformeCierreModal } from "@/components/composite/informe-cierre-modal"
 import { proyectos, actividades } from "@/lib/data/actividades-db"
 import { beneficiariosDisponibles } from "@/lib/data/viaticos-db"
 import type { Viatico } from "@/lib/data/viaticos-db"
@@ -43,6 +47,7 @@ interface Gasto {
   tipoGasto: string
   descripcion: string
   actividad: string
+  federacion: string
   costoUnitario: number
   cantidad: number
   costoTotal: number
@@ -85,243 +90,356 @@ interface GrupoActividad {
 
 const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-// Datos mock iniciales
-const gruposIniciales: GrupoActividad[] = [
+// Constante para el ID del grupo por defecto
+const GRUPO_DEFAULT_ID = "grupo-bandeja-gastos"
+
+// Función helper para generar documentos requeridos estándar
+// Si el gasto está "listo", todos los documentos deben estar subidos y sin advertencias
+const getDocumentosRequeridosEstandar = (gastoId: string, estado: "incompleto" | "listo" = "incompleto"): Array<{
+  id: string
+  nombre: string
+  subido: boolean
+  tieneAdvertencia?: boolean
+  documentoUrl?: string
+  nombreArchivo?: string
+  fechaCarga?: string
+  validaciones?: Array<{
+    id: string
+    nombre: string
+    cumplida: boolean
+  }>
+}> => {
+  const esListo = estado === "listo"
+  
+  return [
     {
-      id: "grupo-1",
-      nombre: "Proyecto 1 AR",
-      cantidadGastos: 12,
-      cantidadActividades: 3, // Competencia en España, Copa Mundial de Atletismo, Campeonato Sudamericano
-      gastos: [
-        {
-          id: "gasto-1",
-          tipoGasto: "Alojamiento",
-          descripcion: "Habitación doble (16 al 25 de agosto) x 190.000 por dia",
-          actividad: "Competencia en España",
-          costoUnitario: 999999,
-          cantidad: 10,
-          costoTotal: 999999999,
-          estado: "incompleto",
-          documentosRequeridos: [
-            {
-              id: "doc-1",
-              nombre: "Planilla de detalle de items",
-              subido: true,
-              documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
-              nombreArchivo: "planilla-items.pdf",
-              fechaCarga: "Cargado el 15 ago 2025",
-              validaciones: [
-                { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
-                { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
-                { id: "v3", nombre: "Formato correcto", cumplida: true },
-              ],
-            },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: false },
-            {
-              id: "doc-3",
-              nombre: "Cartola bancaria",
-              subido: true,
-              tieneAdvertencia: true,
-              documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
-              nombreArchivo: "cartola-bancaria.pdf",
-              fechaCarga: "Cargado el 14 ago 2025",
-              validaciones: [
-                { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: false },
-                { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
-              ],
-            },
-            { id: "doc-4", nombre: "Copia cedible", subido: false },
-            { id: "doc-5", nombre: "Cédula de identidad", subido: false },
-          ],
-        },
-        {
-          id: "gasto-2",
-          tipoGasto: "Alojamiento",
-          descripcion: "Habitación doble (16 al 25 de agosto) x 190.000 por dia",
-          actividad: "Competencia en España",
-          costoUnitario: 999999,
-          cantidad: 10,
-          costoTotal: 999999999,
-          estado: "listo",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: true },
-          ],
-        },
-        {
-          id: "gasto-3",
-          tipoGasto: "Pasajes",
-          descripcion: "Vuelos Santiago - Madrid ida y vuelta",
-          actividad: "Competencia en España",
-          costoUnitario: 850000,
-          cantidad: 8,
-          costoTotal: 6800000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: false },
-          ],
-        },
-        {
-          id: "gasto-4",
-          tipoGasto: "Alimentación",
-          descripcion: "Viáticos diarios para 8 deportistas x 10 días",
-          actividad: "Competencia en España",
-          costoUnitario: 25000,
-          cantidad: 80,
-          costoTotal: 2000000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: false },
-          ],
-        },
-        {
-          id: "gasto-5",
-          tipoGasto: "Transporte",
-          descripcion: "Traslados aeropuerto - hotel - estadio",
-          actividad: "Copa Mundial de Atletismo",
-          costoUnitario: 45000,
-          cantidad: 12,
-          costoTotal: 540000,
-          estado: "listo",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: true },
-          ],
-        },
-        {
-          id: "gasto-6",
-          tipoGasto: "Equipamiento",
-          descripcion: "Uniforme oficial y zapatillas de competencia",
-          actividad: "Copa Mundial de Atletismo",
-          costoUnitario: 120000,
-          cantidad: 15,
-          costoTotal: 1800000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: false },
-          ],
-        },
-        {
-          id: "gasto-7",
-          tipoGasto: "Alojamiento",
-          descripcion: "Hotel 4 estrellas cerca del estadio (5 noches)",
-          actividad: "Copa Mundial de Atletismo",
-          costoUnitario: 95000,
-          cantidad: 15,
-          costoTotal: 1425000,
-          estado: "listo",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: true },
-          ],
-        },
-        {
-          id: "gasto-8",
-          tipoGasto: "Pasajes",
-          descripcion: "Vuelos Santiago - París ida y vuelta",
-          actividad: "Copa Mundial de Atletismo",
-          costoUnitario: 920000,
-          cantidad: 15,
-          costoTotal: 13800000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: false },
-          ],
-        },
-        {
-          id: "gasto-9",
-          tipoGasto: "Seguro médico",
-          descripcion: "Seguro de viaje y cobertura médica internacional",
-          actividad: "Campeonato Sudamericano",
-          costoUnitario: 35000,
-          cantidad: 20,
-          costoTotal: 700000,
-          estado: "listo",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: true },
-          ],
-        },
-        {
-          id: "gasto-10",
-          tipoGasto: "Inscripciones",
-          descripcion: "Inscripción de atletas y técnicos al campeonato",
-          actividad: "Campeonato Sudamericano",
-          costoUnitario: 150000,
-          cantidad: 20,
-          costoTotal: 3000000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: false },
-          ],
-        },
-        {
-          id: "gasto-11",
-          tipoGasto: "Alimentación",
-          descripcion: "Viáticos diarios para 20 deportistas x 7 días",
-          actividad: "Campeonato Sudamericano",
-          costoUnitario: 28000,
-          cantidad: 140,
-          costoTotal: 3920000,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: false },
-          ],
-        },
-        {
-          id: "gasto-12",
-          tipoGasto: "Transporte local",
-          descripcion: "Traslados hotel - estadio - hotel durante competencia",
-          actividad: "Campeonato Sudamericano",
-          costoUnitario: 38000,
-          cantidad: 40,
-          costoTotal: 1520000,
-          estado: "listo",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: true },
-            { id: "doc-2", nombre: "Comprobante de egreso", subido: true },
-          ],
-        },
+      id: `${gastoId}-doc-1`,
+      nombre: "Planilla de detalle de ítems presentados en producto",
+      subido: true,
+      documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
+      nombreArchivo: "planilla-detalle-items.pdf",
+      fechaCarga: "Cargado el 15 ago 2025",
+      validaciones: [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+        { id: "v3", nombre: "Formato correcto", cumplida: true },
       ],
     },
     {
-      id: "grupo-2",
-      nombre: "Proyecto 2 AR",
-      cantidadGastos: 7,
-      cantidadActividades: 1,
-      gastos: [
-        {
-          id: "gasto-5",
-          tipoGasto: "Alojamiento",
-          descripcion: "Habitación doble (16 al 25 de agosto) x 190.000 por dia",
-          actividad: "Nombre de la actividad",
-          costoUnitario: 999999,
-          cantidad: 10,
-          costoTotal: 999999999,
-          estado: "incompleto",
-          documentosRequeridos: [
-            { id: "doc-1", nombre: "Planilla de detalle de items", subido: false },
-          ],
-        },
+      id: `${gastoId}-doc-2`,
+      nombre: "Comprobante de egreso",
+      subido: true,
+      documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
+      nombreArchivo: "comprobante-egreso.pdf",
+      fechaCarga: "Cargado el 14 ago 2025",
+      validaciones: [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
       ],
+    },
+    {
+      id: `${gastoId}-doc-3`,
+      nombre: "Factura emitida por proveedor",
+      subido: esListo,
+      documentoUrl: esListo ? "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png" : undefined,
+      nombreArchivo: esListo ? "factura-proveedor.pdf" : undefined,
+      fechaCarga: esListo ? "Cargado el 13 ago 2025" : undefined,
+      validaciones: esListo ? [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+      ] : undefined,
+    },
+    {
+      id: `${gastoId}-doc-4`,
+      nombre: "Orden de compra de emisión",
+      subido: true,
+      documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
+      nombreArchivo: "orden-compra.pdf",
+      fechaCarga: "Cargado el 13 ago 2025",
+      validaciones: [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+      ],
+    },
+    {
+      id: `${gastoId}-doc-5`,
+      nombre: "Planilla de beneficiarios firmada por proveedor",
+      subido: esListo,
+      documentoUrl: esListo ? "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png" : undefined,
+      nombreArchivo: esListo ? "planilla-beneficiarios.pdf" : undefined,
+      fechaCarga: esListo ? "Cargado el 12 ago 2025" : undefined,
+      validaciones: esListo ? [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+      ] : undefined,
+    },
+    {
+      id: `${gastoId}-doc-6`,
+      nombre: "Contrato de servicios",
+      subido: true,
+      tieneAdvertencia: !esListo, // Solo tiene advertencia si no está listo
+      documentoUrl: "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png",
+      nombreArchivo: "contrato-servicios.pdf",
+      fechaCarga: "Cargado el 12 ago 2025",
+      validaciones: [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: esListo }, // Solo cumplida si está listo
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+      ],
+    },
+    {
+      id: `${gastoId}-doc-7`,
+      nombre: "Copia de cédula de identidad / pasaporte vigente",
+      subido: esListo,
+      documentoUrl: esListo ? "http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png" : undefined,
+      nombreArchivo: esListo ? "cedula-pasaporte.pdf" : undefined,
+      fechaCarga: esListo ? "Cargado el 11 ago 2025" : undefined,
+      validaciones: esListo ? [
+        { id: "v1", nombre: "Fecha acorde con la actividad", cumplida: true },
+        { id: "v2", nombre: "Monto dentro del rango", cumplida: true },
+      ] : undefined,
     },
   ]
+}
+
+// Datos mock iniciales
+const gruposIniciales: GrupoActividad[] = [
+  {
+    id: GRUPO_DEFAULT_ID,
+    nombre: "Bandeja de gastos",
+    cantidadGastos: 18,
+    cantidadActividades: 8,
+    gastos: [
+      {
+        id: "gasto-bandeja-1",
+        tipoGasto: "Alimentación",
+        descripcion: "Viáticos diarios para entrenamiento",
+        actividad: "Competencia en España",
+        federacion: "Atletismo",
+        costoUnitario: 20000,
+        cantidad: 5,
+        costoTotal: 100000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-1", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-2",
+        tipoGasto: "Transporte",
+        descripcion: "Traslados a centro de entrenamiento",
+        actividad: "Competencia en España",
+        federacion: "Atletismo",
+        costoUnitario: 15000,
+        cantidad: 10,
+        costoTotal: 150000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-2", "listo"),
+      },
+      {
+        id: "gasto-bandeja-3",
+        tipoGasto: "Equipamiento",
+        descripcion: "Material deportivo básico",
+        actividad: "Copa Mundial de Atletismo",
+        federacion: "Atletismo",
+        costoUnitario: 50000,
+        cantidad: 3,
+        costoTotal: 150000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-3", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-4",
+        tipoGasto: "Inscripciones",
+        descripcion: "Inscripción a competencia",
+        actividad: "Copa Mundial de Atletismo",
+        federacion: "Atletismo",
+        costoUnitario: 30000,
+        cantidad: 4,
+        costoTotal: 120000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-4", "listo"),
+      },
+      {
+        id: "gasto-bandeja-5",
+        tipoGasto: "Alojamiento",
+        descripcion: "Hotel para competencia (2 noches)",
+        actividad: "Concentrado en Italia",
+        federacion: "Atletismo",
+        costoUnitario: 80000,
+        cantidad: 4,
+        costoTotal: 320000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-5", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-6",
+        tipoGasto: "Pasajes",
+        descripcion: "Vuelos internacionales",
+        actividad: "Concentrado en Italia",
+        federacion: "Atletismo",
+        costoUnitario: 150000,
+        cantidad: 6,
+        costoTotal: 900000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-6", "listo"),
+      },
+      {
+        id: "gasto-bandeja-7",
+        tipoGasto: "Transporte",
+        descripcion: "Traslados aeropuerto - hotel",
+        actividad: "Campeonato Sudamericano",
+        federacion: "Atletismo",
+        costoUnitario: 25000,
+        cantidad: 6,
+        costoTotal: 150000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-7", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-8",
+        tipoGasto: "Alimentación",
+        descripcion: "Viáticos para competencia",
+        actividad: "Campeonato Sudamericano",
+        federacion: "Atletismo",
+        costoUnitario: 22000,
+        cantidad: 18,
+        costoTotal: 396000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-8", "listo"),
+      },
+      {
+        id: "gasto-bandeja-9",
+        tipoGasto: "Pasajes",
+        descripcion: "Vuelos a Francia",
+        actividad: "Competencia en Francia",
+        federacion: "Natación",
+        costoUnitario: 180000,
+        cantidad: 4,
+        costoTotal: 720000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-9", "listo"),
+      },
+      {
+        id: "gasto-bandeja-10",
+        tipoGasto: "Alojamiento",
+        descripcion: "Hotel en Francia (3 noches)",
+        actividad: "Competencia en Francia",
+        federacion: "Natación",
+        costoUnitario: 95000,
+        cantidad: 4,
+        costoTotal: 380000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-10", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-11",
+        tipoGasto: "Transporte",
+        descripcion: "Traslados durante competencia",
+        actividad: "Mundial de Natación",
+        federacion: "Natación",
+        costoUnitario: 30000,
+        cantidad: 5,
+        costoTotal: 150000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-11", "listo"),
+      },
+      {
+        id: "gasto-bandeja-12",
+        tipoGasto: "Alimentación",
+        descripcion: "Viáticos para mundial",
+        actividad: "Mundial de Natación",
+        federacion: "Natación",
+        costoUnitario: 25000,
+        cantidad: 12,
+        costoTotal: 300000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-12", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-13",
+        tipoGasto: "Pasajes",
+        descripcion: "Vuelos para Tour de Francia",
+        actividad: "Tour de Francia",
+        federacion: "Ciclismo",
+        costoUnitario: 200000,
+        cantidad: 8,
+        costoTotal: 1600000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-13", "listo"),
+      },
+      {
+        id: "gasto-bandeja-14",
+        tipoGasto: "Equipamiento",
+        descripcion: "Bicicletas y accesorios",
+        actividad: "Tour de Francia",
+        federacion: "Ciclismo",
+        costoUnitario: 500000,
+        cantidad: 2,
+        costoTotal: 1000000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-14", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-15",
+        tipoGasto: "Inscripciones",
+        descripcion: "Inscripción a Copa América",
+        actividad: "Copa América",
+        federacion: "Fútbol",
+        costoUnitario: 40000,
+        cantidad: 25,
+        costoTotal: 1000000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-15", "listo"),
+      },
+      {
+        id: "gasto-bandeja-16",
+        tipoGasto: "Alojamiento",
+        descripcion: "Hotel para selección (5 noches)",
+        actividad: "Copa América",
+        federacion: "Fútbol",
+        costoUnitario: 120000,
+        cantidad: 25,
+        costoTotal: 3000000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-16", "incompleto"),
+      },
+      {
+        id: "gasto-bandeja-17",
+        tipoGasto: "Pasajes",
+        descripcion: "Vuelos para Mundial de Fútbol",
+        actividad: "Mundial de Fútbol",
+        federacion: "Fútbol",
+        costoUnitario: 250000,
+        cantidad: 30,
+        costoTotal: 7500000,
+        estado: "listo",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-17", "listo"),
+      },
+      {
+        id: "gasto-bandeja-18",
+        tipoGasto: "Alimentación",
+        descripcion: "Viáticos para Liga Nacional",
+        actividad: "Liga Nacional",
+        federacion: "Básquetbol",
+        costoUnitario: 28000,
+        cantidad: 15,
+        costoTotal: 420000,
+        estado: "incompleto",
+        documentosRequeridos: getDocumentosRequeridosEstandar("gasto-bandeja-18", "incompleto"),
+      },
+    ],
+  },
+]
 
 export default function RendicionesPage() {
   const router = useRouter()
-  const [selectedGrupo, setSelectedGrupo] = useState<string>("grupo-1")
+  const [selectedGrupo, setSelectedGrupo] = useState<string>(GRUPO_DEFAULT_ID)
   const [selectedMes, setSelectedMes] = useState<string>("Ene")
   const [selectedTab, setSelectedTab] = useState<string>("todos")
-  const [sortBy, setSortBy] = useState<"actividades" | "tipo-gasto">("actividades")
+  const [searchQuery, setSearchQuery] = useState<string>("")
   
   // Datos mock con estado
   const [grupos, setGrupos] = useState<GrupoActividad[]>(gruposIniciales)
   
-  const [selectedGasto, setSelectedGasto] = useState<Gasto | null>(
-    gruposIniciales[0]?.gastos[0] || null
-  )
+  const [selectedGasto, setSelectedGasto] = useState<Gasto | null>(null)
   
   // Sincronizar selectedGasto cuando cambian los grupos
   useEffect(() => {
@@ -347,10 +465,18 @@ export default function RendicionesPage() {
   const [isAgregarGrupoOpen, setIsAgregarGrupoOpen] = useState(false)
   const [isMoverActividadOpen, setIsMoverActividadOpen] = useState(false)
   const [actividadAMover, setActividadAMover] = useState<{ nombre: string; gastos: Gasto[] } | null>(null)
+  const [isEliminarGrupoOpen, setIsEliminarGrupoOpen] = useState(false)
+  const [grupoAEliminar, setGrupoAEliminar] = useState<GrupoActividad | null>(null)
+  const [isRenombrandoGrupo, setIsRenombrandoGrupo] = useState(false)
+  const [nuevoNombreGrupo, setNuevoNombreGrupo] = useState("")
   
   // Estado para viáticos
   const [viaticos, setViaticos] = useState<Viatico[]>([])
   const [isCrearViaticoOpen, setIsCrearViaticoOpen] = useState(false)
+  const [isDetallesViaticoOpen, setIsDetallesViaticoOpen] = useState(false)
+  const [isEliminarViaticoOpen, setIsEliminarViaticoOpen] = useState(false)
+  const [viaticoAEliminar, setViaticoAEliminar] = useState<string | null>(null)
+  const [isInformeCierreOpen, setIsInformeCierreOpen] = useState(false)
 
   const grupoActual = grupos.find((g) => g.id === selectedGrupo)
   
@@ -359,15 +485,34 @@ export default function RendicionesPage() {
   const totalGastos = grupoActual?.gastos.length || 0
   const progreso = totalGastos > 0 ? (gastosListos / totalGastos) * 100 : 0
 
-  // Filtrar gastos según el tab seleccionado
+  // Filtrar gastos según el tab seleccionado y búsqueda
   const gastosFiltrados = grupoActual?.gastos.filter((gasto) => {
-    if (selectedTab === "incompletos") return gasto.estado === "incompleto"
-    if (selectedTab === "listos") return gasto.estado === "listo"
+    // Filtro por tab
+    if (selectedTab === "incompletos" && gasto.estado !== "incompleto") return false
+    if (selectedTab === "listos" && gasto.estado !== "listo") return false
+    if (selectedTab === "viaticos" && !gasto.esViatico) return false
+    if (selectedTab !== "viaticos" && gasto.esViatico) return false // Excluir viáticos de otros tabs
+    
+    // Filtro por búsqueda
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      return (
+        gasto.tipoGasto.toLowerCase().includes(query) ||
+        gasto.descripcion.toLowerCase().includes(query) ||
+        gasto.actividad.toLowerCase().includes(query) ||
+        gasto.federacion.toLowerCase().includes(query)
+      )
+    }
+    
     return true
   }) || []
 
-  // Agrupar por actividad
-  const gastosPorActividad = gastosFiltrados.reduce((acc, gasto) => {
+  // Separar viáticos de otros gastos
+  const gastosViaticos = gastosFiltrados.filter(gasto => gasto.esViatico)
+  const gastosNoViaticos = gastosFiltrados.filter(gasto => !gasto.esViatico)
+
+  // Agrupar por actividad (excluyendo viáticos)
+  const gastosPorActividad = gastosNoViaticos.reduce((acc, gasto) => {
     if (!acc[gasto.actividad]) {
       acc[gasto.actividad] = []
     }
@@ -392,11 +537,13 @@ export default function RendicionesPage() {
 
     // Buscar gastos que pertenezcan a estas actividades en todos los grupos
     const gastosDelGrupo: Gasto[] = []
+    const gastosIdsAMover = new Set<string>()
     
     grupos.forEach(grupo => {
       grupo.gastos.forEach(gasto => {
         if (nombresActividades.includes(gasto.actividad)) {
           gastosDelGrupo.push(gasto)
+          gastosIdsAMover.add(gasto.id)
         }
       })
     })
@@ -412,7 +559,24 @@ export default function RendicionesPage() {
       gastos: gastosDelGrupo,
     }
 
-    setGrupos(prev => [...prev, nuevoGrupo])
+    // Actualizar los grupos: remover los gastos del grupo origen y agregar el nuevo grupo
+    setGrupos(prevGrupos => {
+      const gruposActualizados = prevGrupos.map(grupo => {
+        // Remover los gastos que se movieron al nuevo grupo
+        const gastosRestantes = grupo.gastos.filter(g => !gastosIdsAMover.has(g.id))
+        const actividadesRestantes = new Set(gastosRestantes.map(g => g.actividad)).size
+        
+        return {
+          ...grupo,
+          gastos: gastosRestantes,
+          cantidadGastos: gastosRestantes.length,
+          cantidadActividades: actividadesRestantes,
+        }
+      })
+      
+      return [...gruposActualizados, nuevoGrupo]
+    })
+    
     setSelectedGrupo(nuevoGrupo.id)
   }
 
@@ -475,13 +639,14 @@ export default function RendicionesPage() {
       tipoGasto: "Viático",
       descripcion: nuevoViatico.nombre,
       actividad: "Viáticos", // Agrupamos todos los viáticos bajo esta actividad
+      federacion: grupoActual?.gastos[0]?.federacion || "Atletismo", // Usar la federación del primer gasto o default
       costoUnitario: nuevoViatico.costoTotal,
       cantidad: 1,
       costoTotal: nuevoViatico.costoTotal,
       estado: "listo",
       esViatico: true,
       viaticoId: nuevoViatico.id,
-      documentosRequeridos: [],
+      documentosRequeridos: getDocumentosRequeridosEstandar(`gasto-viatico-${Date.now()}`, "listo"),
     }
 
     // Actualizar los gastos originales para marcarlos como parte del viático
@@ -521,6 +686,77 @@ export default function RendicionesPage() {
         return grupo
       })
     })
+  }
+
+  // Función para renombrar un grupo
+  const handleRenombrarGrupo = () => {
+    if (!nuevoNombreGrupo.trim() || !grupoActual) return
+    
+    setGrupos(prevGrupos => {
+      return prevGrupos.map(grupo => {
+        if (grupo.id === selectedGrupo) {
+          return {
+            ...grupo,
+            nombre: nuevoNombreGrupo.trim(),
+          }
+        }
+        return grupo
+      })
+    })
+    
+    setIsRenombrandoGrupo(false)
+    setNuevoNombreGrupo("")
+  }
+
+  // Función para eliminar un grupo y mover los gastos a la bandeja de gastos
+  const handleEliminarGrupo = () => {
+    if (!grupoAEliminar) return
+    
+    // No permitir eliminar la bandeja de gastos
+    if (grupoAEliminar.id === GRUPO_DEFAULT_ID) {
+      setIsEliminarGrupoOpen(false)
+      setGrupoAEliminar(null)
+      return
+    }
+
+    setGrupos(prevGrupos => {
+      // Encontrar la bandeja de gastos
+      const bandejaGastos = prevGrupos.find(g => g.id === GRUPO_DEFAULT_ID)
+      if (!bandejaGastos) return prevGrupos
+
+      // Mover todos los gastos del grupo a eliminar a la bandeja de gastos
+      const gastosAMover = grupoAEliminar.gastos
+      const nuevosGastosBandeja = [...bandejaGastos.gastos, ...gastosAMover]
+      const nuevasActividadesBandeja = new Set(nuevosGastosBandeja.map(g => g.actividad)).size
+
+      // Si el grupo eliminado estaba seleccionado, cambiar a la bandeja de gastos
+      if (selectedGrupo === grupoAEliminar.id) {
+        setSelectedGrupo(GRUPO_DEFAULT_ID)
+      }
+
+      // Si hay un gasto seleccionado del grupo que se elimina, cerrar el panel
+      if (selectedGasto && gastosAMover.some(g => g.id === selectedGasto.id)) {
+        setSelectedGasto(null)
+      }
+
+      return prevGrupos
+        .filter(g => g.id !== grupoAEliminar.id) // Eliminar el grupo
+        .map(grupo => {
+          if (grupo.id === GRUPO_DEFAULT_ID) {
+            // Actualizar la bandeja de gastos con los nuevos gastos
+            return {
+              ...grupo,
+              gastos: nuevosGastosBandeja,
+              cantidadGastos: nuevosGastosBandeja.length,
+              cantidadActividades: nuevasActividadesBandeja,
+            }
+          }
+          return grupo
+        })
+    })
+
+    setIsEliminarGrupoOpen(false)
+    setGrupoAEliminar(null)
   }
 
   // Función para eliminar un viático y devolver los gastos a su estado inicial
@@ -585,6 +821,58 @@ export default function RendicionesPage() {
         {/* Sidebar */}
         <div className="bg-sidebar border-r border-border flex flex-col h-full shrink-0 w-60">
           <div className="flex flex-col gap-2 grow items-start p-2 pt-3">
+            <div className="flex flex-col gap-2 w-full">
+              {/* Bandeja de gastos */}
+              {grupos
+                .filter(grupo => grupo.id === GRUPO_DEFAULT_ID)
+                .map((grupo) => (
+                  <Button
+                    key={grupo.id}
+                    variant={selectedGrupo === grupo.id ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-between h-auto px-4 py-2",
+                      selectedGrupo === grupo.id && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => setSelectedGrupo(grupo.id)}
+                  >
+                    <span className="text-left">{grupo.nombre}</span>
+                    <Badge variant="secondary">
+                      {grupo.cantidadActividades ?? 
+                        new Set(grupo.gastos.map(g => g.actividad)).size}
+                    </Badge>
+                  </Button>
+                ))}
+            </div>
+            
+            {/* Separador y título de grupos */}
+            <div className="w-full pt-6">
+              <p className="text-xs font-medium px-4 text-muted-foreground">Grupos (productos)</p>
+            </div>
+            
+            {/* Grupos */}
+            <div className="flex flex-col gap-2 w-full">
+              {grupos
+                .filter(grupo => grupo.id !== GRUPO_DEFAULT_ID)
+                .map((grupo) => (
+                  <Button
+                    key={grupo.id}
+                    variant={selectedGrupo === grupo.id ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-between h-auto px-4 py-2",
+                      selectedGrupo === grupo.id && "bg-accent text-accent-foreground"
+                    )}
+                    onClick={() => setSelectedGrupo(grupo.id)}
+                  >
+                    <span className="text-left">{grupo.nombre}</span>
+                    <Badge variant="secondary">
+                      {grupo.cantidadActividades ?? 
+                        new Set(grupo.gastos.map(g => g.actividad)).size}
+                    </Badge>
+                  </Button>
+                ))}
+            </div>
+            
+            {/* Botón agregar grupo */}
             <Button 
               variant="ghost" 
               className="w-full justify-start gap-1.5 h-auto py-2"
@@ -593,25 +881,6 @@ export default function RendicionesPage() {
               <Plus className="size-4" />
               <span>Agregar un grupo</span>
             </Button>
-            <div className="flex flex-col gap-2 w-full">
-              {grupos.map((grupo) => (
-                <Button
-                  key={grupo.id}
-                  variant={selectedGrupo === grupo.id ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-between h-auto px-4 py-2",
-                    selectedGrupo === grupo.id && "bg-accent text-accent-foreground"
-                  )}
-                  onClick={() => setSelectedGrupo(grupo.id)}
-                >
-                  <span className="text-left">{grupo.nombre}</span>
-                  <Badge variant="secondary">
-                    {grupo.cantidadActividades ?? 
-                      new Set(grupo.gastos.map(g => g.actividad)).size}
-                  </Badge>
-                </Button>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -620,28 +889,101 @@ export default function RendicionesPage() {
           <div className="flex-1 flex flex-col overflow-y-auto gap-10">
             {/* Header sticky */}
             <div className="bg-background sticky top-0 z-10 flex flex-col gap-4 p-4 pb-0 border-b">
-              <div className="flex items-center gap-5 justify-between">
-                <div className="flex items-center gap-5">
-                  <h2 className="text-2xl font-medium">Gastos</h2>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {gastosListos}/{totalGastos} listos
-                    </span>
-                    <div className="bg-slate-300 h-2 w-20 rounded-full overflow-hidden">
-                      <div
-                        className="bg-teal-700 h-full transition-all"
-                        style={{ width: `${progreso}%` }}
+              <div className="flex items-center gap-5 justify-between relative">
+                <div className="flex items-center gap-5 flex-1 relative">
+                  {isRenombrandoGrupo ? (
+                    <div className="absolute left-0 top-0 bg-background z-20 flex items-center gap-2 px-4 py-0" style={{ width: 'calc(100% - 200px)' }}>
+                      <Input
+                        value={nuevoNombreGrupo}
+                        onChange={(e) => setNuevoNombreGrupo(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleRenombrarGrupo()
+                          } else if (e.key === "Escape") {
+                            setIsRenombrandoGrupo(false)
+                            setNuevoNombreGrupo("")
+                          }
+                        }}
+                        className="flex-1"
+                        autoFocus
                       />
+                      <Button
+                        size="sm"
+                        onClick={handleRenombrarGrupo}
+                        disabled={!nuevoNombreGrupo.trim()}
+                      >
+                        Guardar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsRenombrandoGrupo(false)
+                          setNuevoNombreGrupo("")
+                        }}
+                      >
+                        Cancelar
+                      </Button>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-2xl font-medium">{grupoActual?.nombre || "Gastos"}</h2>
+                        {grupoActual && grupoActual.id !== GRUPO_DEFAULT_ID && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <MoreVertical className="size-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-40 p-1" align="start">
+                              <button
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground w-full"
+                                onClick={() => {
+                                  setNuevoNombreGrupo(grupoActual.nombre)
+                                  setIsRenombrandoGrupo(true)
+                                }}
+                              >
+                                Renombrar
+                              </button>
+                              <button
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
+                                onClick={() => {
+                                  setGrupoAEliminar(grupoActual)
+                                  setIsEliminarGrupoOpen(true)
+                                }}
+                              >
+                                <Trash2 className="size-4" />
+                                Eliminar grupo
+                              </button>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {gastosListos}/{totalGastos} listos
+                        </span>
+                        <div className="bg-slate-300 h-2 w-20 rounded-full overflow-hidden">
+                          <div
+                            className="bg-teal-700 h-full transition-all"
+                            style={{ width: `${progreso}%` }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <Button
                   variant="default"
                   className="gap-2"
-                  onClick={() => setIsCrearViaticoOpen(true)}
+                  onClick={() => setIsInformeCierreOpen(true)}
                 >
-                  <Plus className="size-4" />
-                  Agregar un viático
+                  Ver informe de cierre
                 </Button>
               </div>
 
@@ -685,42 +1027,45 @@ export default function RendicionesPage() {
                     >
                       Listos
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="viaticos"
+                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
+                    >
+                      Viáticos
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
 
                 <div className="flex gap-1 items-center">
-                  <button
-                    onClick={() => setSortBy("actividades")}
-                    className={cn(
-                      "h-9 px-2.5 rounded-md text-sm font-medium transition-colors",
-                      sortBy === "actividades"
-                        ? "bg-muted text-foreground"
-                        : "text-foreground hover:bg-accent"
-                    )}
-                  >
-                    Por actividades
-                  </button>
-                  <button
-                    onClick={() => setSortBy("tipo-gasto")}
-                    className={cn(
-                      "h-9 px-2.5 rounded-md text-sm font-medium transition-colors",
-                      sortBy === "tipo-gasto"
-                        ? "bg-muted text-foreground"
-                        : "text-foreground hover:bg-accent"
-                    )}
-                  >
-                    Por Tipo de gasto
-                  </button>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="Buscar"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setSearchQuery("")
+                          e.currentTarget.blur()
+                        }
+                      }}
+                      className="h-9 pl-9 pr-3 w-64"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Listado de gastos agrupados por actividad */}
             <div className="flex flex-col gap-6 p-4">
-              {Object.entries(gastosPorActividad).map(([actividad, gastos]) => (
+              {selectedTab !== "viaticos" && Object.entries(gastosPorActividad).map(([actividad, gastos]) => (
                 <div key={actividad} className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-3">
-                    <h3 className="text-xl font-medium">{actividad}</h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-xl font-medium">{actividad}</h3>
+                      <p className="text-sm text-muted-foreground">{gastos[0]?.federacion}</p>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-muted-foreground">
                         {gastos.length} gastos
@@ -762,10 +1107,8 @@ export default function RendicionesPage() {
                           key={gasto.id}
                           className={cn(
                             "flex gap-4 items-start p-2 border-b transition-colors",
-                            !puedeInteractuar && "opacity-60 cursor-not-allowed",
                             puedeInteractuar && "cursor-pointer hover:bg-muted/50",
-                            selectedGasto?.id === gasto.id && "bg-accent",
-                            index === 0 && selectedGasto === null && puedeInteractuar && "bg-accent"
+                            selectedGasto?.id === gasto.id && "bg-accent"
                           )}
                           onClick={() => puedeInteractuar && setSelectedGasto(gasto)}
                         >
@@ -778,50 +1121,11 @@ export default function RendicionesPage() {
                                 {gasto.tipoGasto}
                               </h4>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Badge
-                                  variant={gasto.estado === "listo" ? "default" : "outline"}
-                                  className={cn(
-                                    "w-fit",
-                                    gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
-                                  )}
-                                >
-                                  {gasto.estado === "listo" ? "Listo" : "Incompleto"}
-                                </Badge>
-                                {esViatico && (
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
-                                        <MoreVertical className="size-4" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-40 p-1" align="end">
-                                      <button
-                                        className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
-                                        onClick={() => {
-                                          if (gasto.viaticoId) {
-                                            handleEliminarViatico(gasto.viaticoId)
-                                          }
-                                        }}
-                                      >
-                                        <Trash2 className="size-4" />
-                                        Eliminar viático
-                                      </button>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </div>
-                              <p className={cn(
-                                "text-sm line-clamp-2",
-                                esParteDeViaticos ? "text-muted-foreground line-through" : "text-foreground"
-                              )}>
-                                {gasto.descripcion}
-                              </p>
-                              {esParteDeViaticos && gasto.parteDeViaticos && (
-                                <div className="flex flex-col gap-1 mt-1">
-                                  <p className="text-xs text-muted-foreground">
-                                    Incluído en viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}:
-                                  </p>
-                                  <div className="flex flex-wrap gap-1">
+                                {esParteDeViaticos && gasto.parteDeViaticos ? (
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      Incluído en viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}:
+                                    </span>
                                     {gasto.parteDeViaticos.map((parte, idx) => (
                                       <button
                                         key={parte.viaticoId}
@@ -838,20 +1142,42 @@ export default function RendicionesPage() {
                                         className="text-xs text-primary hover:underline"
                                       >
                                         {parte.nombreViatico}
-                                        {idx < (gasto.parteDeViaticos?.length || 0) - 1 && ","}
+                                        {gasto.parteDeViaticos && idx < gasto.parteDeViaticos.length - 1 && ","}
                                       </button>
                                     ))}
                                   </div>
-                                </div>
-                              )}
+                                ) : (
+                                  <Badge
+                                    variant={gasto.estado === "listo" ? "default" : "outline"}
+                                    className={cn(
+                                      "w-fit",
+                                      gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                                    )}
+                                  >
+                                    {gasto.estado === "listo" ? "Listo" : "Incompleto"}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className={cn(
+                                "text-sm line-clamp-2",
+                                esParteDeViaticos ? "text-muted-foreground line-through" : "text-foreground"
+                              )}>
+                                {gasto.descripcion}
+                              </p>
                             </div>
                           </div>
-                          <div className="flex-1 flex items-center justify-center p-3">
+                          <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
                             <p className={cn(
                               "text-sm",
                               esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
                             )}>
                               {gasto.actividad}
+                            </p>
+                            <p className={cn(
+                              "text-xs",
+                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
+                            )}>
+                              {gasto.federacion}
                             </p>
                           </div>
                           <div className="flex-1 flex items-center justify-end p-3">
@@ -884,6 +1210,101 @@ export default function RendicionesPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Sección de Viáticos */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-medium">Viáticos</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {gastosViaticos.length} viático{gastosViaticos.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col border-t">
+                  {gastosViaticos.length > 0 ? (
+                    gastosViaticos.map((gasto) => {
+                      const puedeInteractuar = true
+
+                      return (
+                        <div
+                          key={gasto.id}
+                          className={cn(
+                            "flex gap-4 items-start p-2 border-b transition-colors",
+                            puedeInteractuar && "cursor-pointer hover:bg-muted/50",
+                            selectedGasto?.id === gasto.id && "bg-accent"
+                          )}
+                          onClick={() => puedeInteractuar && setSelectedGasto(gasto)}
+                        >
+                          <div className="flex-1 flex gap-2 min-w-[200px] p-3">
+                            <div className="flex-1 flex flex-col gap-1">
+                              <h4 className="text-base font-semibold">
+                                {gasto.tipoGasto}
+                              </h4>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge
+                                  variant={gasto.estado === "listo" ? "default" : "outline"}
+                                  className={cn(
+                                    "w-fit",
+                                    gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
+                                  )}
+                                >
+                                  {gasto.estado === "listo" ? "Listo" : "Incompleto"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm line-clamp-2 text-foreground">
+                                {gasto.descripcion}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
+                            <p className="text-sm text-muted-foreground">
+                              {gasto.actividad}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {gasto.federacion}
+                            </p>
+                          </div>
+                          <div className="flex-1 flex items-center justify-end p-3">
+                            <p className="text-sm text-muted-foreground">
+                              {formatCurrency(gasto.costoUnitario)}
+                            </p>
+                          </div>
+                          <div className="w-16 flex items-center justify-end p-3">
+                            <p className="text-sm text-muted-foreground">
+                              {gasto.cantidad}
+                            </p>
+                          </div>
+                          <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
+                            <p className="text-sm font-medium">
+                              {formatCurrency(gasto.costoTotal)}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p className="text-sm">No hay viáticos creados</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón agregar viático */}
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setIsCrearViaticoOpen(true)}
+                  >
+                    <CircleDollarSign className="size-4" />
+                    Agregar un viático
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -891,13 +1312,51 @@ export default function RendicionesPage() {
           {selectedGasto && (
             <GastoDetailPanel>
               <GastoDetailPanel.Header onClose={() => setSelectedGasto(null)}>
+                {/* Botón de eliminar viático - solo si es un viático */}
+                {selectedGasto.esViatico && selectedGasto.viaticoId && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 absolute top-[8px] right-[40px] z-10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="size-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-40 p-1" align="end">
+                      <button
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
+                        onClick={() => {
+                          setViaticoAEliminar(selectedGasto.viaticoId!)
+                          setIsEliminarViaticoOpen(true)
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                        Eliminar viático
+                      </button>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <GastoDetailPanel.Info>
                   <p className="text-sm text-muted-foreground">{selectedGasto.actividad}</p>
+                  <p className="text-sm text-muted-foreground">{selectedGasto.federacion}</p>
                   <h3 className="text-lg font-semibold">{selectedGasto.tipoGasto}</h3>
                   <p className="text-sm text-foreground line-clamp-2">
                     {selectedGasto.descripcion}
                   </p>
                   <p className="text-sm font-semibold">{formatCurrency(selectedGasto.costoTotal)}</p>
+                  {/* Botón de detalles del viático - solo si es un viático */}
+                  {selectedGasto.esViatico && selectedGasto.viaticoId && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={() => setIsDetallesViaticoOpen(true)}
+                    >
+                      Detalles del viático
+                    </Button>
+                  )}
                 </GastoDetailPanel.Info>
                 <GastoDetailPanel.Actions
                   onAddDocument={() => {
@@ -1181,6 +1640,7 @@ export default function RendicionesPage() {
                     </div>
                   </div>
                 </GastoDetailPanel.AdicionalesSection>
+
               </GastoDetailPanel.Content>
             </GastoDetailPanel>
           )}
@@ -1439,6 +1899,89 @@ export default function RendicionesPage() {
         gastosDisponibles={grupoActual?.gastos.filter(g => !g.esViatico) || []}
         beneficiariosDisponibles={beneficiariosDisponibles}
         onGuardar={handleGuardarViatico}
+      />
+
+      {/* Modal de detalles del viático */}
+      <DetallesViaticoModal
+        open={isDetallesViaticoOpen}
+        onOpenChange={setIsDetallesViaticoOpen}
+        viatico={selectedGasto?.esViatico && selectedGasto.viaticoId 
+          ? viaticos.find(v => v.id === selectedGasto.viaticoId) || null
+          : null}
+        beneficiariosDisponibles={beneficiariosDisponibles}
+      />
+
+      {/* Dialog para eliminar grupo */}
+      <Dialog open={isEliminarGrupoOpen} onOpenChange={setIsEliminarGrupoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar grupo y mover los gastos a la bandeja de gastos</DialogTitle>
+            <DialogDescription>
+              Si eliminas el grupo los gastos se moveran con toda su información y documentación hacía la página de bandeja de gastos, podrás moverlos a otro grupo cuando quieras
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEliminarGrupoOpen(false)
+                setGrupoAEliminar(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleEliminarGrupo}
+            >
+              Eliminar y mover gastos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para eliminar viático */}
+      <Dialog open={isEliminarViaticoOpen} onOpenChange={setIsEliminarViaticoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar viático y reestablecer gastos individuales</DialogTitle>
+            <DialogDescription>
+              Si eliminas el viático, los gastos volveran a aparecer individualmente
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEliminarViaticoOpen(false)
+                setViaticoAEliminar(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (viaticoAEliminar) {
+                  handleEliminarViatico(viaticoAEliminar)
+                  setSelectedGasto(null)
+                  setIsEliminarViaticoOpen(false)
+                  setViaticoAEliminar(null)
+                }
+              }}
+            >
+              Eliminar viático
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de informe de cierre */}
+      <InformeCierreModal
+        open={isInformeCierreOpen}
+        onOpenChange={setIsInformeCierreOpen}
+        nombreArchivo="informe-cierre.pdf"
+        pdfUrl="http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png"
       />
     </div>
   )
