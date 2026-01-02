@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign } from "lucide-react"
+import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RequisitoDocumentModal } from "@/components/composite/requisito-document-modal"
 import { PdfCompiladoModal } from "@/components/composite/pdf-compilado-modal"
@@ -476,6 +476,7 @@ export default function RendicionesPage() {
   const [isDetallesViaticoOpen, setIsDetallesViaticoOpen] = useState(false)
   const [isEliminarViaticoOpen, setIsEliminarViaticoOpen] = useState(false)
   const [viaticoAEliminar, setViaticoAEliminar] = useState<string | null>(null)
+  const [viaticoAEditar, setViaticoAEditar] = useState<string | null>(null)
   const [isInformeCierreOpen, setIsInformeCierreOpen] = useState(false)
 
   const grupoActual = grupos.find((g) => g.id === selectedGrupo)
@@ -491,7 +492,8 @@ export default function RendicionesPage() {
     if (selectedTab === "incompletos" && gasto.estado !== "incompleto") return false
     if (selectedTab === "listos" && gasto.estado !== "listo") return false
     if (selectedTab === "viaticos" && !gasto.esViatico) return false
-    if (selectedTab !== "viaticos" && gasto.esViatico) return false // Excluir viáticos de otros tabs
+    // Excluir viáticos solo de tabs "incompletos" y "listos", pero incluirlos en "todos"
+    if ((selectedTab === "incompletos" || selectedTab === "listos") && gasto.esViatico) return false
     
     // Filtro por búsqueda
     if (searchQuery.trim()) {
@@ -511,14 +513,17 @@ export default function RendicionesPage() {
   const gastosViaticos = gastosFiltrados.filter(gasto => gasto.esViatico)
   const gastosNoViaticos = gastosFiltrados.filter(gasto => !gasto.esViatico)
 
-  // Agrupar por actividad (excluyendo viáticos)
-  const gastosPorActividad = gastosNoViaticos.reduce((acc, gasto) => {
-    if (!acc[gasto.actividad]) {
-      acc[gasto.actividad] = []
+  // Agrupar por federación y luego por actividad (excluyendo viáticos)
+  const gastosPorFederacion = gastosNoViaticos.reduce((acc, gasto) => {
+    if (!acc[gasto.federacion]) {
+      acc[gasto.federacion] = {}
     }
-    acc[gasto.actividad].push(gasto)
+    if (!acc[gasto.federacion][gasto.actividad]) {
+      acc[gasto.federacion][gasto.actividad] = []
+    }
+    acc[gasto.federacion][gasto.actividad].push(gasto)
     return acc
-  }, {} as Record<string, Gasto[]>)
+  }, {} as Record<string, Record<string, Gasto[]>>)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CL", {
@@ -886,9 +891,9 @@ export default function RendicionesPage() {
 
         {/* Contenido principal */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-y-auto gap-10">
-            {/* Header sticky */}
-            <div className="bg-background sticky top-0 z-10 flex flex-col gap-4 p-4 pb-0 border-b">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header - abraza su contenido */}
+            <div className="bg-background shrink-0 flex flex-col gap-4 p-4 pb-0 border-b">
               <div className="flex items-center gap-5 justify-between relative">
                 <div className="flex items-center gap-5 flex-1 relative">
                   {isRenombrandoGrupo ? (
@@ -963,17 +968,6 @@ export default function RendicionesPage() {
                             </PopoverContent>
                           </Popover>
                         )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {gastosListos}/{totalGastos} listos
-                        </span>
-                        <div className="bg-slate-300 h-2 w-20 rounded-full overflow-hidden">
-                          <div
-                            className="bg-teal-700 h-full transition-all"
-                            style={{ width: `${progreso}%` }}
-                          />
-                        </div>
                       </div>
                     </>
                   )}
@@ -1057,47 +1051,55 @@ export default function RendicionesPage() {
               </div>
             </div>
 
-            {/* Listado de gastos agrupados por actividad */}
-            <div className="flex flex-col gap-6 p-4">
-              {selectedTab !== "viaticos" && Object.entries(gastosPorActividad).map(([actividad, gastos]) => (
-                <div key={actividad} className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-xl font-medium">{actividad}</h3>
-                      <p className="text-sm text-muted-foreground">{gastos[0]?.federacion}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        {gastos.length} gastos
-                      </span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="size-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-40 p-1" align="end">
-                          <div className="flex flex-col gap-0">
-                            <button 
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground"
-                              onClick={() => {
-                                setActividadAMover({ nombre: actividad, gastos })
-                                setIsMoverActividadOpen(true)
-                              }}
-                            >
-                              Mover a otro grupo
-                            </button>
-                            <button className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground">
-                              Ir a la actividad
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+            {/* Listado de gastos - ocupa el alto disponible restante */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-col gap-6 p-4">
+              {selectedTab !== "viaticos" && Object.entries(gastosPorFederacion).map(([federacion, actividades]) => (
+                <div key={federacion} className="flex flex-col gap-12">
+                  {/* Título de Federación sticky */}
+                  <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-4 pt-3">
+                    <h2 className="text-xl font-semibold ">{federacion}</h2>
                   </div>
+                  
+                  {Object.entries(actividades).map(([actividad, gastos]) => (
+                    <div key={actividad} className="flex flex-col gap-8">
+                      {/* Título de Actividad sticky - debajo del de federación */}
+                      <div className="sticky top-[40px] z-10 bg-background pb-0 -mt-4 -mx-4 px-4 pt-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-muted-foreground">{actividad}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              {gastos.length} gastos
+                            </span>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="size-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-40 p-1" align="end">
+                                <div className="flex flex-col gap-0">
+                                  <button 
+                                    className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground"
+                                    onClick={() => {
+                                      setActividadAMover({ nombre: actividad, gastos })
+                                      setIsMoverActividadOpen(true)
+                                    }}
+                                  >
+                                    Mover a otro grupo
+                                  </button>
+                                  <button className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground">
+                                    Ir a la actividad
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                      </div>
 
-                  <div className="flex flex-col border-t">
-                    {gastos.map((gasto, index) => {
+                      <div className="flex flex-col border-t">
+                        {gastos.map((gasto, index) => {
                       const esParteDeViaticos = gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0
                       const esViatico = gasto.esViatico
                       const puedeInteractuar = !esParteDeViaticos
@@ -1121,7 +1123,7 @@ export default function RendicionesPage() {
                                 {gasto.tipoGasto}
                               </h4>
                               <div className="flex items-center gap-2 flex-wrap">
-                                {esParteDeViaticos && gasto.parteDeViaticos ? (
+                                {esParteDeViaticos && gasto.parteDeViaticos && (
                                   <div className="flex flex-wrap items-center gap-1">
                                     <span className="text-xs text-muted-foreground">
                                       Incluído en viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}:
@@ -1146,16 +1148,6 @@ export default function RendicionesPage() {
                                       </button>
                                     ))}
                                   </div>
-                                ) : (
-                                  <Badge
-                                    variant={gasto.estado === "listo" ? "default" : "outline"}
-                                    className={cn(
-                                      "w-fit",
-                                      gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
-                                    )}
-                                  >
-                                    {gasto.estado === "listo" ? "Listo" : "Incompleto"}
-                                  </Badge>
                                 )}
                               </div>
                               <p className={cn(
@@ -1167,18 +1159,23 @@ export default function RendicionesPage() {
                             </div>
                           </div>
                           <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
-                            <p className={cn(
-                              "text-sm",
-                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
-                            )}>
-                              {gasto.actividad}
-                            </p>
-                            <p className={cn(
-                              "text-xs",
-                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
-                            )}>
-                              {gasto.federacion}
-                            </p>
+                            {!esParteDeViaticos && (() => {
+                              const requisitosListos = gasto.documentosRequeridos.filter(d => d.subido).length
+                              const totalRequisitos = gasto.documentosRequeridos.length
+                              const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
+                              const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
+                              return (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
+                                  <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
+                                    <div
+                                      className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
+                                      style={{ width: `${porcentaje}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )
+                            })()}
                           </div>
                           <div className="flex-1 flex items-center justify-end p-3">
                             <p className={cn(
@@ -1205,9 +1202,11 @@ export default function RendicionesPage() {
                             </p>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
 
@@ -1244,29 +1243,29 @@ export default function RendicionesPage() {
                               <h4 className="text-base font-semibold">
                                 {gasto.tipoGasto}
                               </h4>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge
-                                  variant={gasto.estado === "listo" ? "default" : "outline"}
-                                  className={cn(
-                                    "w-fit",
-                                    gasto.estado === "listo" && "bg-teal-700 text-white border-teal-700"
-                                  )}
-                                >
-                                  {gasto.estado === "listo" ? "Listo" : "Incompleto"}
-                                </Badge>
-                              </div>
                               <p className="text-sm line-clamp-2 text-foreground">
                                 {gasto.descripcion}
                               </p>
                             </div>
                           </div>
                           <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
-                            <p className="text-sm text-muted-foreground">
-                              {gasto.actividad}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {gasto.federacion}
-                            </p>
+                            {(() => {
+                              const requisitosListos = gasto.documentosRequeridos.filter(d => d.subido).length
+                              const totalRequisitos = gasto.documentosRequeridos.length
+                              const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
+                              const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
+                              return (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
+                                  <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
+                                    <div
+                                      className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
+                                      style={{ width: `${porcentaje}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )
+                            })()}
                           </div>
                           <div className="flex-1 flex items-center justify-end p-3">
                             <p className="text-sm text-muted-foreground">
@@ -1305,6 +1304,7 @@ export default function RendicionesPage() {
                   </Button>
                 </div>
               </div>
+              </div>
             </div>
           </div>
 
@@ -1312,33 +1312,6 @@ export default function RendicionesPage() {
           {selectedGasto && (
             <GastoDetailPanel>
               <GastoDetailPanel.Header onClose={() => setSelectedGasto(null)}>
-                {/* Botón de eliminar viático - solo si es un viático */}
-                {selectedGasto.esViatico && selectedGasto.viaticoId && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 absolute top-[8px] right-[40px] z-10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-40 p-1" align="end">
-                      <button
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
-                        onClick={() => {
-                          setViaticoAEliminar(selectedGasto.viaticoId!)
-                          setIsEliminarViaticoOpen(true)
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                        Eliminar viático
-                      </button>
-                    </PopoverContent>
-                  </Popover>
-                )}
                 <GastoDetailPanel.Info>
                   <p className="text-sm text-muted-foreground">{selectedGasto.actividad}</p>
                   <p className="text-sm text-muted-foreground">{selectedGasto.federacion}</p>
@@ -1349,13 +1322,48 @@ export default function RendicionesPage() {
                   <p className="text-sm font-semibold">{formatCurrency(selectedGasto.costoTotal)}</p>
                   {/* Botón de detalles del viático - solo si es un viático */}
                   {selectedGasto.esViatico && selectedGasto.viaticoId && (
-                    <Button
-                      variant="outline"
-                      className="w-full mt-2"
-                      onClick={() => setIsDetallesViaticoOpen(true)}
-                    >
-                      Detalles del viático
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setIsDetallesViaticoOpen(true)}
+                      >
+                        Detalles del viático
+                      </Button>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="size-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-1" align="end">
+                          <button
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground w-full"
+                            onClick={() => {
+                              setViaticoAEditar(selectedGasto.viaticoId!)
+                              setIsCrearViaticoOpen(true)
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                            Editar viático
+                          </button>
+                          <button
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
+                            onClick={() => {
+                              setViaticoAEliminar(selectedGasto.viaticoId!)
+                              setIsEliminarViaticoOpen(true)
+                            }}
+                          >
+                            <Trash2 className="size-4" />
+                            Eliminar viático
+                          </button>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   )}
                 </GastoDetailPanel.Info>
                 <GastoDetailPanel.Actions
@@ -1369,10 +1377,23 @@ export default function RendicionesPage() {
                   }}
                   onVerPdf={() => setIsPdfCompiladoOpen(true)}
                 >
-                  <p className="text-xs font-medium">
-                    {selectedGasto.documentosRequeridos.filter((d) => d.subido).length}/
-                    {selectedGasto.documentosRequeridos.length} requisitos listos
-                  </p>
+                  {(() => {
+                    const requisitosListos = selectedGasto.documentosRequeridos.filter(d => d.subido).length
+                    const totalRequisitos = selectedGasto.documentosRequeridos.length
+                    const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
+                    const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
+                        <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
+                          <div
+                            className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
+                            style={{ width: `${porcentaje}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </GastoDetailPanel.Actions>
               </GastoDetailPanel.Header>
 
@@ -1909,6 +1930,16 @@ export default function RendicionesPage() {
           ? viaticos.find(v => v.id === selectedGasto.viaticoId) || null
           : null}
         beneficiariosDisponibles={beneficiariosDisponibles}
+        onEditar={(viaticoId) => {
+          setViaticoAEditar(viaticoId)
+          setIsDetallesViaticoOpen(false)
+          setIsCrearViaticoOpen(true)
+        }}
+        onEliminar={(viaticoId) => {
+          setViaticoAEliminar(viaticoId)
+          setIsDetallesViaticoOpen(false)
+          setIsEliminarViaticoOpen(true)
+        }}
       />
 
       {/* Dialog para eliminar grupo */}

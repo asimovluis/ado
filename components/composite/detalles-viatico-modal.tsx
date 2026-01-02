@@ -3,7 +3,8 @@
 import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { X, MoreVertical, Trash2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { BeneficiarioViatico, GastoViatico, Viatico } from "@/lib/data/viaticos-db"
 
@@ -12,6 +13,8 @@ interface DetallesViaticoModalProps {
   onOpenChange: (open: boolean) => void
   viatico: Viatico | null
   beneficiariosDisponibles: BeneficiarioViatico[]
+  onEditar?: (viaticoId: string) => void
+  onEliminar?: (viaticoId: string) => void
 }
 
 export function DetallesViaticoModal({
@@ -19,6 +22,8 @@ export function DetallesViaticoModal({
   onOpenChange,
   viatico,
   beneficiariosDisponibles,
+  onEditar,
+  onEliminar,
 }: DetallesViaticoModalProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CL", {
@@ -39,7 +44,47 @@ export function DetallesViaticoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">{viatico.nombre}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold">{viatico.nombre}</DialogTitle>
+            {(onEditar || onEliminar) && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="size-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-40 p-1" align="end">
+                  {onEditar && (
+                    <button
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground w-full"
+                      onClick={() => {
+                        onEditar(viatico.id)
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                      Editar viático
+                    </button>
+                  )}
+                  {onEliminar && (
+                    <button
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
+                      onClick={() => {
+                        onEliminar(viatico.id)
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                      Eliminar viático
+                    </button>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex flex-col gap-6">
