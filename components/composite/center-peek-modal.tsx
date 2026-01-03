@@ -90,7 +90,7 @@ function CenterPeekModalHeader({
   )
 }
 
-interface CenterPeekModalContentProps extends React.ComponentProps<"div"> {}
+type CenterPeekModalContentProps = React.ComponentProps<"div">
 
 function CenterPeekModalContent({
   className,
@@ -104,7 +104,7 @@ function CenterPeekModalContent({
   )
 }
 
-interface CenterPeekModalFooterProps extends React.ComponentProps<"div"> {}
+type CenterPeekModalFooterProps = React.ComponentProps<"div">
 
 function CenterPeekModalFooter({
   className,

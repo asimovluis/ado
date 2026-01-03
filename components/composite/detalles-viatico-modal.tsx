@@ -3,8 +3,7 @@
 import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { X, MoreVertical, Trash2, Pencil } from "lucide-react"
+import { Trash2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { BeneficiarioViatico, GastoViatico, Viatico } from "@/lib/data/viaticos-db"
 
@@ -44,48 +43,34 @@ export function DetallesViaticoModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">{viatico.nombre}</DialogTitle>
-            {(onEditar || onEliminar) && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreVertical className="size-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-40 p-1" align="end">
-                  {onEditar && (
-                    <button
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground w-full"
-                      onClick={() => {
-                        onEditar(viatico.id)
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                      Editar viático
-                    </button>
-                  )}
-                  {onEliminar && (
-                    <button
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
-                      onClick={() => {
-                        onEliminar(viatico.id)
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                      Eliminar viático
-                    </button>
-                  )}
-                </PopoverContent>
-              </Popover>
+          <DialogTitle className="text-xl font-semibold">{viatico.nombre}</DialogTitle>
+        </DialogHeader>
+
+        {/* Botones de acción */}
+        {(onEditar || onEliminar) && (
+          <div className="flex items-center justify-between px-6 pb-4 border-b">
+            {onEditar && (
+              <Button
+                variant="outline"
+                onClick={() => onEditar(viatico.id)}
+                className="gap-2"
+              >
+                <Pencil className="size-4" />
+                Editar viático
+              </Button>
+            )}
+            {onEliminar && (
+              <Button
+                variant="outline"
+                onClick={() => onEliminar(viatico.id)}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+                Eliminar viático
+              </Button>
             )}
           </div>
-        </DialogHeader>
+        )}
 
         <div className="flex flex-col gap-6">
           {/* Sección de Gastos */}
@@ -121,6 +106,12 @@ export function DetallesViaticoModal({
                 </div>
               ))}
             </div>
+
+            {/* Resumen del costo total */}
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <p className="text-base font-semibold">Costo total del viático</p>
+              <p className="text-lg font-semibold">{formatCurrency(viatico.costoTotal)}</p>
+            </div>
           </div>
 
           {/* Sección de Beneficiarios */}
@@ -152,12 +143,6 @@ export function DetallesViaticoModal({
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Resumen del costo total */}
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <p className="text-base font-semibold">Costo total del viático</p>
-            <p className="text-lg font-semibold">{formatCurrency(viatico.costoTotal)}</p>
           </div>
         </div>
       </DialogContent>

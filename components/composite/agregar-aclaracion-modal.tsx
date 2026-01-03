@@ -31,7 +31,8 @@ export function AgregarAclaracionModal({
       setTituloValue(titulo)
       setTexto(contenido)
     }
-  }, [titulo, contenido, open])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const handleSave = () => {
     if (onSave && tituloValue.trim() && texto.trim()) {

@@ -27,12 +27,13 @@ export function AgregarDocumentoModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sincronizar el contenido cuando cambia la prop o se abre el modal
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
       setTituloValue(titulo)
       setFile(archivo || null)
     }
-  }, [titulo, archivo, open])
+  }, [open])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]

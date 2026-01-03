@@ -447,10 +447,11 @@ export default function RendicionesPage() {
       const updatedGasto = grupos
         .find((g) => g.id === selectedGrupo)
         ?.gastos.find((g) => g.id === selectedGasto.id)
-      if (updatedGasto) {
+      if (updatedGasto && updatedGasto.id !== selectedGasto.id) {
         setSelectedGasto(updatedGasto)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grupos, selectedGrupo])
   const [selectedDocumento, setSelectedDocumento] = useState<{
     gastoId: string
@@ -1044,8 +1045,18 @@ export default function RendicionesPage() {
                           e.currentTarget.blur()
                         }
                       }}
-                      className="h-9 pl-9 pr-3 w-64"
+                      className={cn("h-9 pl-9 w-64", searchQuery ? "pr-9" : "pr-3")}
                     />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => setSearchQuery("")}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1320,51 +1331,6 @@ export default function RendicionesPage() {
                     {selectedGasto.descripcion}
                   </p>
                   <p className="text-sm font-semibold">{formatCurrency(selectedGasto.costoTotal)}</p>
-                  {/* Botón de detalles del viático - solo si es un viático */}
-                  {selectedGasto.esViatico && selectedGasto.viaticoId && (
-                    <div className="flex gap-2 mt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setIsDetallesViaticoOpen(true)}
-                      >
-                        Detalles del viático
-                      </Button>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="size-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-40 p-1" align="end">
-                          <button
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground w-full"
-                            onClick={() => {
-                              setViaticoAEditar(selectedGasto.viaticoId!)
-                              setIsCrearViaticoOpen(true)
-                            }}
-                          >
-                            <Pencil className="size-4" />
-                            Editar viático
-                          </button>
-                          <button
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive w-full"
-                            onClick={() => {
-                              setViaticoAEliminar(selectedGasto.viaticoId!)
-                              setIsEliminarViaticoOpen(true)
-                            }}
-                          >
-                            <Trash2 className="size-4" />
-                            Eliminar viático
-                          </button>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
                 </GastoDetailPanel.Info>
                 <GastoDetailPanel.Actions
                   onAddDocument={() => {
@@ -1376,6 +1342,17 @@ export default function RendicionesPage() {
                     setIsAgregarAclaracionOpen(true)
                   }}
                   onVerPdf={() => setIsPdfCompiladoOpen(true)}
+                  onVerViatico={selectedGasto.esViatico && selectedGasto.viaticoId ? () => setIsDetallesViaticoOpen(true) : undefined}
+                  onCreateViatico={() => setIsCrearViaticoOpen(true)}
+                  onEditarViatico={selectedGasto.esViatico && selectedGasto.viaticoId ? () => {
+                    setViaticoAEditar(selectedGasto.viaticoId!)
+                    setIsCrearViaticoOpen(true)
+                  } : undefined}
+                  onEliminarViatico={selectedGasto.esViatico && selectedGasto.viaticoId ? () => {
+                    setViaticoAEliminar(selectedGasto.viaticoId!)
+                    setIsEliminarViaticoOpen(true)
+                  } : undefined}
+                  isViatico={selectedGasto.esViatico || false}
                 >
                   {(() => {
                     const requisitosListos = selectedGasto.documentosRequeridos.filter(d => d.subido).length

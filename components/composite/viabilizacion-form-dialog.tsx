@@ -132,7 +132,8 @@ export function ViabilizacionFormDialog({
         beneficiariosSeleccionados: [],
       })
     }
-  }, [initialData, open])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const handleSave = () => {
     onSave(formData)

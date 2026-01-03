@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2 } from "lucide-react"
+import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, CircleDollarSign, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface GastoDetailPanelProps {
@@ -55,7 +55,7 @@ const GastoDetailPanelHeader = React.forwardRef<HTMLDivElement, GastoDetailPanel
 )
 GastoDetailPanelHeader.displayName = "GastoDetailPanelHeader"
 
-interface GastoDetailPanelContentProps extends React.ComponentProps<"div"> {}
+type GastoDetailPanelContentProps = React.ComponentProps<"div">
 
 const GastoDetailPanelContent = React.forwardRef<HTMLDivElement, GastoDetailPanelContentProps>(
   ({ className, children, ...props }, ref) => {
@@ -72,7 +72,7 @@ const GastoDetailPanelContent = React.forwardRef<HTMLDivElement, GastoDetailPane
 )
 GastoDetailPanelContent.displayName = "GastoDetailPanelContent"
 
-interface GastoDetailPanelInfoProps extends React.ComponentProps<"div"> {}
+type GastoDetailPanelInfoProps = React.ComponentProps<"div">
 
 const GastoDetailPanelInfo = React.forwardRef<HTMLDivElement, GastoDetailPanelInfoProps>(
   ({ className, children, ...props }, ref) => {
@@ -93,10 +93,15 @@ interface GastoDetailPanelActionsProps extends React.ComponentProps<"div"> {
   onAddDocument?: () => void
   onAddAclaracion?: () => void
   onVerPdf?: () => void
+  onVerViatico?: () => void
+  onCreateViatico?: () => void
+  onEditarViatico?: () => void
+  onEliminarViatico?: () => void
+  isViatico?: boolean
 }
 
 const GastoDetailPanelActions = React.forwardRef<HTMLDivElement, GastoDetailPanelActionsProps>(
-  ({ className, onAddDocument, onAddAclaracion, onVerPdf, children, ...props }, ref) => {
+  ({ className, onAddDocument, onAddAclaracion, onVerPdf, onVerViatico, onCreateViatico, onEditarViatico, onEliminarViatico, isViatico = false, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -105,49 +110,75 @@ const GastoDetailPanelActions = React.forwardRef<HTMLDivElement, GastoDetailPane
       >
         {children}
         <div className="flex gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-                <Plus className="size-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-40 p-1" align="end">
-              <div className="flex flex-col gap-0">
-                <button className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm font-semibold text-foreground">
-                  Agregar
-                </button>
-                <div className="h-px bg-border my-1" />
-                <button
-                  className="flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground relative"
-                  onClick={onAddDocument}
-                >
-                  <Upload className="size-4 absolute left-2" />
-                  Documento adicional
-                </button>
-                <button
-                  className="flex items-center gap-2 pl-8 pr-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground relative"
-                  onClick={onAddAclaracion}
-                >
-                  <MessageSquare className="size-4 absolute left-2" />
-                  Observaciones
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <div className="flex gap-2 flex-1">
+          <Button
+            variant="default"
+            size="sm"
+            className="w-[140px]"
+            onClick={onVerPdf}
+          >
+            PDF
+          </Button>
+          {isViatico && onVerViatico && (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
-              onClick={onVerPdf}
+              onClick={onVerViatico}
             >
-              Ver PDF
+              Ver viático
             </Button>
-            <Button size="sm" className="flex-1 gap-1.5">
-              <Download className="size-4" />
-              Descargar PDF
-            </Button>
-          </div>
+          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+                <MoreVertical className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-1" align="end">
+              <div className="flex flex-col gap-0">
+                <button
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground text-left"
+                  onClick={onAddDocument}
+                >
+                  <Plus className="size-4" />
+                  <span>Agregar documento adicional</span>
+                </button>
+                <button
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground text-left"
+                  onClick={onAddAclaracion}
+                >
+                  <Plus className="size-4" />
+                  <span>Agregar observaciones</span>
+                </button>
+                {!isViatico && onCreateViatico && (
+                  <button
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground text-left"
+                    onClick={onCreateViatico}
+                  >
+                    <CircleDollarSign className="size-4" />
+                    <span>Crear un viático</span>
+                  </button>
+                )}
+                {isViatico && onEditarViatico && (
+                  <>
+                    <button
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-foreground text-left"
+                      onClick={onEditarViatico}
+                    >
+                      <Pencil className="size-4" />
+                      <span>Editar viático</span>
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive text-left"
+                      onClick={onEliminarViatico}
+                    >
+                      <Trash2 className="size-4" />
+                      <span>Eliminar viático</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     )

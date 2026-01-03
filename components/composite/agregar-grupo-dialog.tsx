@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronRight, ChevronDown, Search } from "lucide-react"
+import { ChevronRight, ChevronDown, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Proyecto, Actividad } from "@/lib/data/actividades-db"
 
@@ -34,6 +34,7 @@ export function AgregarGrupoDialog({
   const [expandedFederaciones, setExpandedFederaciones] = React.useState<Set<string>>(new Set())
   const [expandedAnos, setExpandedAnos] = React.useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [nombreError, setNombreError] = React.useState(false)
 
   // Agrupar por Federación > Año > Actividades
   const estructuraJerarquica = React.useMemo(() => {
@@ -173,8 +174,14 @@ export function AgregarGrupoDialog({
   }
 
   const handleSave = () => {
+    if (!nombreGrupo.trim()) {
+      setNombreError(true)
+      return
+    }
+    
     const totalSeleccionado = selectedActividades.size + selectedEquipamientos.size
-    if (nombreGrupo.trim() && totalSeleccionado > 0) {
+    if (totalSeleccionado > 0) {
+      setNombreError(false)
       // Combinar actividades seleccionadas con equipamientos
       const todosIds = Array.from(selectedActividades)
       onSave(nombreGrupo.trim(), todosIds)
@@ -184,6 +191,7 @@ export function AgregarGrupoDialog({
       setExpandedFederaciones(new Set())
       setExpandedAnos(new Set())
       setSearchQuery("")
+      setNombreError(false)
       onOpenChange(false)
     }
   }
@@ -195,6 +203,7 @@ export function AgregarGrupoDialog({
     setExpandedFederaciones(new Set())
     setExpandedAnos(new Set())
     setSearchQuery("")
+    setNombreError(false)
     onOpenChange(false)
   }
 
@@ -207,6 +216,7 @@ export function AgregarGrupoDialog({
       setExpandedFederaciones(new Set())
       setExpandedAnos(new Set())
       setSearchQuery("")
+      setNombreError(false)
     }
   }, [open])
 
@@ -254,34 +264,64 @@ export function AgregarGrupoDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4 flex-1 overflow-hidden">
-          {/* Buscador */}
+          {/* Input de nombre del grupo */}
           <div className="flex flex-col gap-2">
-            <Label>Buscar</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Buscar"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setSearchQuery("")
-                    e.currentTarget.blur()
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }
-                }}
-                className="pl-9"
-              />
-            </div>
+            <Label htmlFor="nombre-grupo">Nombre del grupo</Label>
+            <Input
+              id="nombre-grupo"
+              value={nombreGrupo}
+              onChange={(e) => {
+                setNombreGrupo(e.target.value)
+                if (nombreError) setNombreError(false)
+              }}
+              placeholder="Ej: Proyecto 1 AR"
+              className={nombreError ? "border-destructive focus-visible:ring-destructive" : ""}
+            />
+            {nombreError && (
+              <p className="text-sm text-destructive">El nombre del grupo es requerido</p>
+            )}
           </div>
 
           {/* Árbol jerárquico */}
           <div className="flex flex-col gap-2 flex-1 overflow-hidden">
             <Label>Seleccionar actividades</Label>
-            <div className="border rounded-lg overflow-y-auto flex-1 p-2">
+            <div className="flex flex-col border rounded-lg flex-1 overflow-hidden">
+              {/* Buscador */}
+              <div className="flex flex-col gap-2 p-2  shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Buscar"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setSearchQuery("")
+                        e.currentTarget.blur()
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }
+                    }}
+                    className={cn("pl-9", searchQuery && "pr-9")}
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => {
+                        setSearchQuery("")
+                        searchInputRef.current?.focus()
+                      }}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1 p-2">
               {estructuraFiltrada.map((federacionData) => {
                 const isFederacionExpanded = expandedFederaciones.has(federacionData.federacion)
 
@@ -289,9 +329,11 @@ export function AgregarGrupoDialog({
                   <div key={federacionData.federacion} className="flex flex-col">
                     {/* Nivel Federación */}
                     <div className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => toggleFederacion(federacionData.federacion)}
-                        className="shrink-0"
+                        className="shrink-0 cursor-pointer"
                         type="button"
                       >
                         {isFederacionExpanded ? (
@@ -299,7 +341,7 @@ export function AgregarGrupoDialog({
                         ) : (
                           <ChevronRight className="size-4" />
                         )}
-                      </button>
+                      </Button>
                       <span className="flex-1 text-sm font-medium">
                         {federacionData.federacion}
                       </span>
@@ -321,12 +363,14 @@ export function AgregarGrupoDialog({
                             <div key={anoKey} className="flex flex-col">
                               {/* Nivel Año */}
                               <div className="flex items-center gap-2 p-2 hover:bg-accent rounded-sm">
-                                <button
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     toggleAno(federacionData.federacion, anoData.año)
                                   }}
-                                  className="shrink-0"
+                                  className="shrink-0 cursor-pointer"
                                   type="button"
                                 >
                                   {isAnoExpanded ? (
@@ -334,7 +378,7 @@ export function AgregarGrupoDialog({
                                   ) : (
                                     <ChevronRight className="size-4" />
                                   )}
-                                </button>
+                                </Button>
                                 <div 
                                   className="flex items-center gap-2 flex-1 cursor-pointer"
                                   onClick={() => 
@@ -365,9 +409,6 @@ export function AgregarGrupoDialog({
                                   </div>
                                   <span className="flex-1 text-sm font-medium">
                                     {anoData.año}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {anoData.actividades.length} actividades
                                   </span>
                                 </div>
                               </div>
@@ -414,29 +455,17 @@ export function AgregarGrupoDialog({
                   </div>
                 )
               })}
+              </div>
             </div>
           </div>
 
-          {/* Input de nombre del grupo - movido abajo */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="nombre-grupo">Nombre del grupo</Label>
-            <Input
-              id="nombre-grupo"
-              value={nombreGrupo}
-              onChange={(e) => setNombreGrupo(e.target.value)}
-              placeholder="Ej: Proyecto 1 AR"
-            />
-          </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSave}
-            disabled={!nombreGrupo.trim() || totalSeleccionado === 0}
-          >
+          <Button onClick={handleSave}>
             Guardar
           </Button>
         </DialogFooter>

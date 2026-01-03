@@ -26,7 +26,8 @@ export function AclaracionesModal({
     if (open) {
       setTexto(contenido)
     }
-  }, [contenido, open])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const handleSave = () => {
     if (onSave) {

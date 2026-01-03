@@ -70,7 +70,7 @@ export function clearStoredBlocks() {
 
 // Exponer la función en window para fácil acceso desde la consola
 if (typeof window !== "undefined") {
-  ; (window as any).clearADOComments = clearStoredBlocks
+  ; (window as typeof window & { clearADOComments: () => void }).clearADOComments = clearStoredBlocks
 }
 
 /**
