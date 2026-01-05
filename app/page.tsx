@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign, Pencil } from "lucide-react"
+import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign, Pencil, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RequisitoDocumentModal } from "@/components/composite/requisito-document-modal"
 import { PdfCompiladoModal } from "@/components/composite/pdf-compilado-modal"
@@ -435,6 +435,8 @@ export default function RendicionesPage() {
   const [selectedMes, setSelectedMes] = useState<string>("Ene")
   const [selectedTab, setSelectedTab] = useState<string>("todos")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  const [selectedFederaciones, setSelectedFederaciones] = useState<Set<string>>(new Set())
+  const [isFiltrosDialogOpen, setIsFiltrosDialogOpen] = useState(false)
   
   // Datos mock con estado
   const [grupos, setGrupos] = useState<GrupoActividad[]>(gruposIniciales)
@@ -482,12 +484,17 @@ export default function RendicionesPage() {
 
   const grupoActual = grupos.find((g) => g.id === selectedGrupo)
   
+  // Obtener todas las federaciones únicas de los gastos
+  const todasLasFederaciones = Array.from(
+    new Set(grupoActual?.gastos.map(g => g.federacion) || [])
+  ).sort()
+  
   // Calcular gastos listos y totales del grupo seleccionado
   const gastosListos = grupoActual?.gastos.filter((g) => g.estado === "listo").length || 0
   const totalGastos = grupoActual?.gastos.length || 0
   const progreso = totalGastos > 0 ? (gastosListos / totalGastos) * 100 : 0
 
-  // Filtrar gastos según el tab seleccionado y búsqueda
+  // Filtrar gastos según el tab seleccionado, búsqueda y federaciones
   const gastosFiltrados = grupoActual?.gastos.filter((gasto) => {
     // Filtro por tab
     if (selectedTab === "incompletos" && gasto.estado !== "incompleto") return false
@@ -495,6 +502,9 @@ export default function RendicionesPage() {
     if (selectedTab === "viaticos" && !gasto.esViatico) return false
     // Excluir viáticos solo de tabs "incompletos" y "listos", pero incluirlos en "todos"
     if ((selectedTab === "incompletos" || selectedTab === "listos") && gasto.esViatico) return false
+    
+    // Filtro por federaciones
+    if (selectedFederaciones.size > 0 && !selectedFederaciones.has(gasto.federacion)) return false
     
     // Filtro por búsqueda
     if (searchQuery.trim()) {
@@ -1000,6 +1010,43 @@ export default function RendicionesPage() {
                 ))}
               </div>
 
+              {/* Badges de filtros activos */}
+              {(selectedFederaciones.size > 0) && (
+                <div className="flex flex-wrap gap-2 items-center px-4 pb-2">
+                  {Array.from(selectedFederaciones).map((federacion) => (
+                    <Badge
+                      key={federacion}
+                      variant="secondary"
+                      className="gap-1.5 pr-1"
+                    >
+                      {federacion}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 hover:bg-transparent"
+                        onClick={() => {
+                          setSelectedFederaciones(prev => {
+                            const newSet = new Set(prev)
+                            newSet.delete(federacion)
+                            return newSet
+                          })
+                        }}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs"
+                    onClick={() => setSelectedFederaciones(new Set())}
+                  >
+                    Quitar filtros
+                  </Button>
+                </div>
+              )}
+
               {/* Tabs y Sort */}
               <div className="flex items-center justify-between border-b border-input pb-0">
                 <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-auto">
@@ -1058,6 +1105,14 @@ export default function RendicionesPage() {
                       </Button>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setIsFiltrosDialogOpen(true)}
+                  >
+                    <SlidersHorizontal className="size-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1991,6 +2046,69 @@ export default function RendicionesPage() {
         nombreArchivo="informe-cierre.pdf"
         pdfUrl="http://localhost:3845/assets/075f59aeb7f1e24458d70e299802f5aa2618a799.png"
       />
+
+      {/* Dialog de filtros de federaciones */}
+      <Dialog open={isFiltrosDialogOpen} onOpenChange={setIsFiltrosDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filtrar por federaciones</DialogTitle>
+            <DialogDescription>
+              Selecciona las federaciones para filtrar los gastos
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-4 max-h-[400px] overflow-y-auto">
+            {todasLasFederaciones.map((federacion) => (
+              <div
+                key={federacion}
+                className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                onClick={() => {
+                  setSelectedFederaciones(prev => {
+                    const newSet = new Set(prev)
+                    if (newSet.has(federacion)) {
+                      newSet.delete(federacion)
+                    } else {
+                      newSet.add(federacion)
+                    }
+                    return newSet
+                  })
+                }}
+              >
+                <Checkbox
+                  checked={selectedFederaciones.has(federacion)}
+                  onCheckedChange={(checked) => {
+                    setSelectedFederaciones(prev => {
+                      const newSet = new Set(prev)
+                      if (checked) {
+                        newSet.add(federacion)
+                      } else {
+                        newSet.delete(federacion)
+                      }
+                      return newSet
+                    })
+                  }}
+                />
+                <label className="text-sm font-medium cursor-pointer flex-1">
+                  {federacion}
+                </label>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedFederaciones(new Set())
+                setIsFiltrosDialogOpen(false)
+              }}
+            >
+              Quitar filtros
+            </Button>
+            <Button onClick={() => setIsFiltrosDialogOpen(false)}>
+              Mostrar resultados
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
