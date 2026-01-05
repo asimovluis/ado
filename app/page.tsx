@@ -446,11 +446,15 @@ export default function RendicionesPage() {
   // Sincronizar selectedGasto cuando cambian los grupos
   useEffect(() => {
     if (selectedGasto) {
-      const updatedGasto = grupos
-        .find((g) => g.id === selectedGrupo)
-        ?.gastos.find((g) => g.id === selectedGasto.id)
-      if (updatedGasto && updatedGasto.id !== selectedGasto.id) {
+      const grupoActual = grupos.find((g) => g.id === selectedGrupo)
+      const updatedGasto = grupoActual?.gastos.find((g) => g.id === selectedGasto.id)
+      
+      if (updatedGasto) {
+        // Si el gasto existe en el nuevo grupo, actualizar la referencia
         setSelectedGasto(updatedGasto)
+      } else {
+        // Si el gasto no existe en el nuevo grupo, limpiar la selección
+        setSelectedGasto(null)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -849,7 +853,17 @@ export default function RendicionesPage() {
                       "w-full justify-between h-auto px-4 py-2",
                       selectedGrupo === grupo.id && "bg-accent text-accent-foreground"
                     )}
-                    onClick={() => setSelectedGrupo(grupo.id)}
+                    onClick={() => {
+                      setSelectedGrupo(grupo.id)
+                      // Limpiar selectedGasto si no existe en el nuevo grupo
+                      if (selectedGasto) {
+                        const nuevoGrupo = grupos.find((g) => g.id === grupo.id)
+                        const gastoExiste = nuevoGrupo?.gastos.some((g) => g.id === selectedGasto.id)
+                        if (!gastoExiste) {
+                          setSelectedGasto(null)
+                        }
+                      }
+                    }}
                   >
                     <span className="text-left">{grupo.nombre}</span>
                     <Badge variant="secondary">
@@ -877,7 +891,17 @@ export default function RendicionesPage() {
                       "w-full justify-between h-auto px-4 py-2",
                       selectedGrupo === grupo.id && "bg-accent text-accent-foreground"
                     )}
-                    onClick={() => setSelectedGrupo(grupo.id)}
+                    onClick={() => {
+                      setSelectedGrupo(grupo.id)
+                      // Limpiar selectedGasto si no existe en el nuevo grupo
+                      if (selectedGasto) {
+                        const nuevoGrupo = grupos.find((g) => g.id === grupo.id)
+                        const gastoExiste = nuevoGrupo?.gastos.some((g) => g.id === selectedGasto.id)
+                        if (!gastoExiste) {
+                          setSelectedGasto(null)
+                        }
+                      }
+                    }}
                   >
                     <span className="text-left">{grupo.nombre}</span>
                     <Badge variant="secondary">
