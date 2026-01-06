@@ -1169,14 +1169,14 @@ export default function RendicionesPage() {
               ) : selectedTab !== "viaticos" && Object.entries(gastosPorFederacion).map(([federacion, actividades]) => (
                 <div key={federacion} className="flex flex-col gap-12">
                   {/* Título de Federación sticky */}
-                  <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-4 pt-3">
+                  <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-[36px] pt-3">
                     <h2 className="text-xl font-semibold ">{federacion}</h2>
                   </div>
                   
                   {Object.entries(actividades).map(([actividad, gastos]) => (
                     <div key={actividad} className="flex flex-col gap-8">
                       {/* Título de Actividad sticky - debajo del de federación */}
-                      <div className="sticky top-[40px] z-10 bg-background pb-0 -mt-4 -mx-4 px-4 pt-0">
+                      <div className="sticky top-[40px] z-10 bg-background pb-0 -mt-4 -mx-4 px-[36px] pt-0">
                         <div className="flex items-center justify-between">
                           <h3 className="text-sm font-medium text-muted-foreground">{actividad}</h3>
                           <div className="flex items-center gap-2">
@@ -1324,7 +1324,7 @@ export default function RendicionesPage() {
 
               {/* Sección de Viáticos */}
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between py-3">
+                <div className="flex items-center justify-between py-3 -mx-4 px-[36px]">
                   <div className="flex flex-col gap-1">
                     <h3 className="text-xl font-medium">Viáticos</h3>
                   </div>
