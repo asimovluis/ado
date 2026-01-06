@@ -1323,6 +1323,7 @@ export default function RendicionesPage() {
               ))}
 
               {/* Sección de Viáticos */}
+              {selectedTab !== "eliminados" && (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between py-3 -mx-4 px-[36px]">
                   <div className="flex flex-col gap-1">
@@ -1416,6 +1417,7 @@ export default function RendicionesPage() {
                   </Button>
                 </div>
               </div>
+              )}
               </div>
             </div>
           </div>
