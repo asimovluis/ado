@@ -40,9 +40,8 @@ export function PageHeader({
       className="border-b border-border bg-background flex items-center gap-5 p-4 w-full"
     >
       {onBack && (
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
+        <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="size-5" />
-          <span>{backButtonText}</span>
         </Button>
       )}
       <div className="flex flex-col gap-0 grow min-w-0">
