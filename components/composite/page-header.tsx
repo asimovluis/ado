@@ -28,7 +28,7 @@ export function PageHeader({
   backButtonText = "Proyectos",
   onBack,
   rightActions,
-  federacionName = "Atletismo",
+  federacionName,
   currentVersion,
   versionHistory = []
 }: PageHeaderProps) {

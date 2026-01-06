@@ -834,7 +834,6 @@ export default function RendicionesPage() {
         title="Rendiciones"
         backButtonText="Proyectos"
         onBack={() => router.push("/viabilizacion")}
-        federacionName="Atletismo"
         currentVersion={undefined}
       />
 
