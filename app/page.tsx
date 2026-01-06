@@ -504,6 +504,7 @@ export default function RendicionesPage() {
     if (selectedTab === "incompletos" && gasto.estado !== "incompleto") return false
     if (selectedTab === "listos" && gasto.estado !== "listo") return false
     if (selectedTab === "viaticos" && !gasto.esViatico) return false
+    if (selectedTab === "eliminados") return false // Los gastos eliminados se manejarán por separado
     // Excluir viáticos solo de tabs "incompletos" y "listos", pero incluirlos en "todos"
     if ((selectedTab === "incompletos" || selectedTab === "listos") && gasto.esViatico) return false
     
@@ -1099,6 +1100,12 @@ export default function RendicionesPage() {
                     >
                       Viáticos
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="eliminados"
+                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
+                    >
+                      Eliminados
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
 
@@ -1144,7 +1151,23 @@ export default function RendicionesPage() {
             {/* Listado de gastos - ocupa el alto disponible restante */}
             <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col gap-6 p-4">
-              {selectedTab !== "viaticos" && Object.entries(gastosPorFederacion).map(([federacion, actividades]) => (
+              {selectedTab === "eliminados" ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4">
+                  <div className="flex flex-col gap-3 items-center max-w-md text-center">
+                    <div className="size-16 rounded-full bg-muted flex items-center justify-center">
+                      <Trash2 className="size-8 text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        No hay gastos eliminados
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Aquí se mostrarán los gastos que sean eliminados de la actividad deportiva. Los gastos eliminados se mantendrán en este listado para referencia histórica.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : selectedTab !== "viaticos" && Object.entries(gastosPorFederacion).map(([federacion, actividades]) => (
                 <div key={federacion} className="flex flex-col gap-12">
                   {/* Título de Federación sticky */}
                   <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-4 pt-3">
