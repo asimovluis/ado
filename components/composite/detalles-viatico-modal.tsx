@@ -56,7 +56,7 @@ export function DetallesViaticoModal({
                 className="gap-2"
               >
                 <Pencil className="size-4" />
-                Editar viático
+                Editar gasto
               </Button>
             )}
             {onEliminar && (
@@ -66,7 +66,7 @@ export function DetallesViaticoModal({
                 className="gap-2 text-destructive hover:text-destructive"
               >
                 <Trash2 className="size-4" />
-                Eliminar viático
+                Eliminar gasto
               </Button>
             )}
           </div>

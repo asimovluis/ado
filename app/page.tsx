@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { PageHeader } from "@/components/composite/page-header"
 import { SidebarNav } from "@/components/composite/sidebar-nav"
@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign, Pencil, SlidersHorizontal } from "lucide-react"
+import { X, Plus, Download, Upload, CheckCircle2, Circle, AlertTriangle, MoreVertical, MessageSquare, FileText, Trash2, Search, CircleDollarSign, Pencil, SlidersHorizontal, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RequisitoDocumentModal } from "@/components/composite/requisito-document-modal"
 import { PdfCompiladoModal } from "@/components/composite/pdf-compilado-modal"
@@ -25,7 +25,7 @@ import { DetallesViaticoModal } from "@/components/composite/detalles-viatico-mo
 import { InformeCierreModal } from "@/components/composite/informe-cierre-modal"
 import { proyectos, actividades } from "@/lib/data/actividades-db"
 import { beneficiariosDisponibles } from "@/lib/data/viaticos-db"
-import type { Viatico } from "@/lib/data/viaticos-db"
+import type { Viatico, GastoAR } from "@/lib/data/viaticos-db"
 
 interface Aclaracion {
   id: string
@@ -86,9 +86,12 @@ interface GrupoActividad {
   gastos: Gasto[]
   // Calculado: cantidad de actividades únicas
   cantidadActividades?: number
+  // Actividades que pertenecen a este grupo (por nombre)
+  actividades?: string[]
 }
 
 const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+const años = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i)
 
 // Constante para el ID del grupo por defecto
 const GRUPO_DEFAULT_ID = "grupo-bandeja-gastos"
@@ -433,10 +436,12 @@ export default function RendicionesPage() {
   const router = useRouter()
   const [selectedGrupo, setSelectedGrupo] = useState<string>(GRUPO_DEFAULT_ID)
   const [selectedMes, setSelectedMes] = useState<string>("Ene")
-  const [selectedTab, setSelectedTab] = useState<string>("todos")
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [todoElAno, setTodoElAno] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedFederaciones, setSelectedFederaciones] = useState<Set<string>>(new Set())
   const [isFiltrosDialogOpen, setIsFiltrosDialogOpen] = useState(false)
+  const [actividadParaAgregarGasto, setActividadParaAgregarGasto] = useState<{federacion: string, actividad: string} | null>(null)
   
   // Datos mock con estado
   const [grupos, setGrupos] = useState<GrupoActividad[]>(gruposIniciales)
@@ -498,15 +503,42 @@ export default function RendicionesPage() {
   const totalGastos = grupoActual?.gastos.length || 0
   const progreso = totalGastos > 0 ? (gastosListos / totalGastos) * 100 : 0
 
-  // Filtrar gastos según el tab seleccionado, búsqueda y federaciones
-  const gastosFiltrados = grupoActual?.gastos.filter((gasto) => {
-    // Filtro por tab
-    if (selectedTab === "incompletos" && gasto.estado !== "incompleto") return false
-    if (selectedTab === "listos" && gasto.estado !== "listo") return false
-    if (selectedTab === "viaticos" && !gasto.esViatico) return false
-    if (selectedTab === "eliminados") return false // Los gastos eliminados se manejarán por separado
-    // Excluir viáticos solo de tabs "incompletos" y "listos", pero incluirlos en "todos"
-    if ((selectedTab === "incompletos" || selectedTab === "listos") && gasto.esViatico) return false
+  // Obtener todas las actividades únicas de los gastos originales Y de los gastos de AR
+  // (para mostrar todas las actividades, incluso si solo tienen gastos de AR)
+  const actividadesPorFederacion = useMemo(() => {
+    if (!grupoActual) return {} as Record<string, Set<string>>
+    
+    const acc: Record<string, Set<string>> = {}
+    
+    // Primero, agregar actividades desde los gastos del grupo
+    grupoActual.gastos.forEach(gasto => {
+      if (!acc[gasto.federacion]) {
+        acc[gasto.federacion] = new Set<string>()
+      }
+      acc[gasto.federacion].add(gasto.actividad)
+    })
+    
+    // Luego, agregar todas las actividades del grupo (incluso si no tienen gastos)
+    if (grupoActual.actividades) {
+      grupoActual.actividades.forEach(nombreActividad => {
+        // Buscar la federación de esta actividad
+        const actividad = actividades.find(a => a.nombre === nombreActividad)
+        if (actividad) {
+          if (!acc[actividad.federacion]) {
+            acc[actividad.federacion] = new Set<string>()
+          }
+          acc[actividad.federacion].add(nombreActividad)
+        }
+      })
+    }
+    
+    return acc
+  }, [grupoActual, actividades])
+
+  // Filtrar solo Gastos de AR para rendir
+  const gastosARFiltrados = grupoActual?.gastos.filter((gasto) => {
+    // Solo mostrar gastos de AR
+    if (!gasto.esViatico) return false
     
     // Filtro por federaciones
     if (selectedFederaciones.size > 0 && !selectedFederaciones.has(gasto.federacion)) return false
@@ -525,12 +557,8 @@ export default function RendicionesPage() {
     return true
   }) || []
 
-  // Separar viáticos de otros gastos
-  const gastosViaticos = gastosFiltrados.filter(gasto => gasto.esViatico)
-  const gastosNoViaticos = gastosFiltrados.filter(gasto => !gasto.esViatico)
-
-  // Agrupar por federación y luego por actividad (excluyendo viáticos)
-  const gastosPorFederacion = gastosNoViaticos.reduce((acc, gasto) => {
+  // Agrupar gastos de AR por federación y luego por actividad
+  const gastosARPorFederacion = gastosARFiltrados.reduce((acc, gasto) => {
     if (!acc[gasto.federacion]) {
       acc[gasto.federacion] = {}
     }
@@ -547,6 +575,45 @@ export default function RendicionesPage() {
       currency: "CLP",
       minimumFractionDigits: 0,
     }).format(amount)
+  }
+
+  // Calcular cuánto falta por transformar en Gastos de AR para una actividad
+  const calcularMontoFaltantePorActividad = (actividad: string) => {
+    if (!grupoActual) return 0
+    
+    // Gastos originales de la actividad (que no sean Gastos de AR)
+    const gastosOriginales = grupoActual.gastos.filter(
+      g => !g.esViatico && g.actividad === actividad
+    )
+    
+    // Calcular total de gastos originales
+    const totalOriginal = gastosOriginales.reduce((sum, g) => sum + g.costoTotal, 0)
+    
+    // Calcular cuánto ya se usó en Gastos de AR (basado en parteDeViaticos)
+    const totalUsadoEnAR = gastosOriginales.reduce((sum, gasto) => {
+      if (gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0) {
+        const usadoEnEsteGasto = gasto.parteDeViaticos.reduce((gastoSum, parte) => {
+          return gastoSum + (parte.cantidadUsada * gasto.costoUnitario)
+        }, 0)
+        return sum + usadoEnEsteGasto
+      }
+      return sum
+    }, 0)
+    
+    return Math.max(0, totalOriginal - totalUsadoEnAR)
+  }
+
+  // Calcular monto disponible (total de gastos originales) para una actividad
+  const calcularMontoDisponiblePorActividad = (actividad: string) => {
+    if (!grupoActual) return 0
+    
+    // Gastos originales de la actividad (que no sean Gastos de AR)
+    const gastosOriginales = grupoActual.gastos.filter(
+      g => !g.esViatico && g.actividad === actividad
+    )
+    
+    // Calcular total de gastos originales
+    return gastosOriginales.reduce((sum, g) => sum + g.costoTotal, 0)
   }
 
   // Función para manejar la creación de un nuevo grupo
@@ -578,6 +645,7 @@ export default function RendicionesPage() {
       cantidadGastos: gastosDelGrupo.length,
       cantidadActividades: actividadesUnicas,
       gastos: gastosDelGrupo,
+      actividades: nombresActividades, // Guardar las actividades del grupo
     }
 
     // Actualizar los grupos: remover los gastos del grupo origen y agregar el nuevo grupo
@@ -620,20 +688,31 @@ export default function RendicionesPage() {
       return prevGrupos.map(grupo => {
         if (grupo.id === selectedGrupo) {
           const actividadesRestantes = new Set(gastosRestantes.map(g => g.actividad)).size
+          // Remover la actividad de la lista de actividades del grupo origen
+          const actividadesActualizadas = grupo.actividades?.filter(
+            act => act !== actividadAMover.nombre
+          ) || []
           return {
             ...grupo,
             gastos: gastosRestantes,
             cantidadGastos: gastosRestantes.length,
             cantidadActividades: actividadesRestantes,
+            actividades: actividadesActualizadas,
           }
         }
         if (grupo.id === grupoDestinoId) {
           const nuevasActividades = new Set([...grupo.gastos, ...gastosAMover].map(g => g.actividad)).size
+          // Agregar la actividad a la lista de actividades del grupo destino si no existe
+          const actividadesActualizadas = grupo.actividades || []
+          if (!actividadesActualizadas.includes(actividadAMover.nombre)) {
+            actividadesActualizadas.push(actividadAMover.nombre)
+          }
           return {
             ...grupo,
             gastos: [...grupo.gastos, ...gastosAMover],
             cantidadGastos: grupo.gastos.length + gastosAMover.length,
             cantidadActividades: nuevasActividades,
+            actividades: actividadesActualizadas,
           }
         }
         return grupo
@@ -643,50 +722,61 @@ export default function RendicionesPage() {
     setActividadAMover(null)
   }
 
-  // Función para manejar la creación de un viático
-  const handleGuardarViatico = (viaticoData: Omit<Viatico, "id" | "fechaCreacion">) => {
-    const nuevoViatico: Viatico = {
-      ...viaticoData,
-      id: `viatico-${Date.now()}`,
+  // Función para manejar la creación de un Gasto de AR para rendir
+  const handleGuardarViatico = (gastoARData: Omit<GastoAR, "id" | "fechaCreacion">) => {
+    const nuevoGastoAR: GastoAR = {
+      ...gastoARData,
+      id: `gasto-ar-${Date.now()}`,
       fechaCreacion: new Date().toISOString(),
     }
 
-    // Agregar el viático a la lista
-    setViaticos(prev => [...prev, nuevoViatico])
+    // Agregar el gasto de AR a la lista de viáticos (mantener compatibilidad)
+    setViaticos(prev => [...prev, nuevoGastoAR as Viatico])
 
-    // Crear un nuevo gasto de tipo "Viático" en el grupo actual
-    const nuevoGastoViatico: Gasto = {
-      id: `gasto-viatico-${Date.now()}`,
-      tipoGasto: "Viático",
-      descripcion: nuevoViatico.nombre,
-      actividad: "Viáticos", // Agrupamos todos los viáticos bajo esta actividad
-      federacion: grupoActual?.gastos[0]?.federacion || "Atletismo", // Usar la federación del primer gasto o default
-      costoUnitario: nuevoViatico.costoTotal,
+    // Obtener la federación y actividad de los gastos originales usados
+    const gastosOriginalesIds = nuevoGastoAR.gastos.map(g => g.gastoId)
+    const gastosOriginales = grupoActual?.gastos.filter(g => 
+      !g.esViatico && gastosOriginalesIds.includes(g.id)
+    ) || []
+    
+    // Obtener la federación del primer gasto original (todos deberían ser de la misma federación)
+    const federacion = gastosOriginales[0]?.federacion || grupoActual?.gastos[0]?.federacion || "Atletismo"
+    // Usar la actividad de origen si existe, sino usar la del primer gasto original
+    const actividad = gastoARData.actividadOrigen || gastosOriginales[0]?.actividad || "Gastos de AR para rendir"
+
+    // Crear un nuevo gasto de tipo según la categoría en el grupo actual
+    const nuevoGasto: Gasto = {
+      id: `gasto-ar-${Date.now()}`,
+      tipoGasto: nuevoGastoAR.categoria,
+      descripcion: nuevoGastoAR.nombre,
+      actividad: actividad,
+      federacion: federacion,
+      costoUnitario: nuevoGastoAR.costoTotal,
       cantidad: 1,
-      costoTotal: nuevoViatico.costoTotal,
+      costoTotal: nuevoGastoAR.costoTotal,
       estado: "listo",
       esViatico: true,
-      viaticoId: nuevoViatico.id,
-      documentosRequeridos: getDocumentosRequeridosEstandar(`gasto-viatico-${Date.now()}`, "listo"),
+      viaticoId: nuevoGastoAR.id,
+      documentosRequeridos: getDocumentosRequeridosEstandar(`gasto-ar-${Date.now()}`, "listo"),
     }
 
-    // Actualizar los gastos originales para marcarlos como parte del viático
+    // Actualizar los gastos originales para marcarlos como parte del gasto de AR
     setGrupos(prevGrupos => {
       return prevGrupos.map(grupo => {
         if (grupo.id === selectedGrupo) {
-          // Actualizar gastos existentes para indicar que son parte del viático
+          // Actualizar gastos existentes para indicar que son parte del gasto de AR
           const gastosActualizados = grupo.gastos.map(gasto => {
-            const gastoEnViatico = nuevoViatico.gastos.find(gv => gv.gastoId === gasto.id)
-            if (gastoEnViatico) {
+            const gastoEnAR = nuevoGastoAR.gastos.find(gv => gv.gastoId === gasto.id)
+            if (gastoEnAR) {
               const parteDeViaticos = gasto.parteDeViaticos || []
               return {
                 ...gasto,
                 parteDeViaticos: [
                   ...parteDeViaticos,
                   {
-                    viaticoId: nuevoViatico.id,
-                    nombreViatico: nuevoViatico.nombre,
-                    cantidadUsada: gastoEnViatico.cantidadSeleccionada,
+                    viaticoId: nuevoGastoAR.id,
+                    nombreViatico: nuevoGastoAR.nombre,
+                    cantidadUsada: gastoEnAR.cantidadSeleccionada,
                   },
                 ],
               }
@@ -694,8 +784,8 @@ export default function RendicionesPage() {
             return gasto
           })
 
-          // Agregar el nuevo gasto de viático
-          const nuevosGastos = [...gastosActualizados, nuevoGastoViatico]
+          // Agregar el nuevo gasto de AR
+          const nuevosGastos = [...gastosActualizados, nuevoGasto]
           
           return {
             ...grupo,
@@ -1008,7 +1098,7 @@ export default function RendicionesPage() {
                   )}
                 </div>
                 <Button
-                  variant="default"
+                  variant="outline"
                   className="gap-2"
                   onClick={() => setIsInformeCierreOpen(true)}
                 >
@@ -1016,12 +1106,59 @@ export default function RendicionesPage() {
                 </Button>
               </div>
 
-              {/* Toggles de meses */}
+              {/* Filtros de año y meses */}
               <div className="flex gap-1 items-center">
+                {/* Selector de año */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-9 w-20">
+                      {selectedYear}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-32 p-2" align="start">
+                    <div className="flex flex-col gap-1">
+                      {años.map((year) => (
+                        <button
+                          key={year}
+                          onClick={() => setSelectedYear(year)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-md text-sm transition-colors text-left",
+                            selectedYear === year
+                              ? "bg-primary text-primary-foreground"
+                              : "hover:bg-accent"
+                          )}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
+                {/* Toggle "Todo el año" */}
+                <button
+                  onClick={() => {
+                    setTodoElAno(true)
+                    setSelectedMes("")
+                  }}
+                  className={cn(
+                    "h-9 px-2.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
+                    todoElAno
+                      ? "bg-muted text-foreground"
+                      : "text-foreground hover:bg-accent"
+                  )}
+                >
+                  Todo el año
+                </button>
+                
+                {/* Toggles de meses */}
                 {meses.map((mes) => (
                   <button
                     key={mes}
-                    onClick={() => setSelectedMes(mes)}
+                    onClick={() => {
+                      setSelectedMes(mes)
+                      setTodoElAno(false)
+                    }}
                     className={cn(
                       "h-9 px-2.5 rounded-md text-sm font-medium transition-colors",
                       selectedMes === mes
@@ -1071,42 +1208,9 @@ export default function RendicionesPage() {
                 </div>
               )}
 
-              {/* Tabs y Sort */}
-              <div className="flex items-center justify-between border-b border-input pb-0">
-                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-auto">
-                  <TabsList className="h-10 bg-transparent p-0">
-                    <TabsTrigger
-                      value="todos"
-                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
-                    >
-                      Todos
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="incompletos"
-                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
-                    >
-                      Incompletos
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="listos"
-                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
-                    >
-                      Listos
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="viaticos"
-                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
-                    >
-                      Viáticos
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="eliminados"
-                      className="h-10 px-3 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
-                    >
-                      Eliminados
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              {/* Título y controles */}
+              <div className="flex items-center justify-between  pb-2">
+                <h2 className="text-xl font-semibold">Gastos de AR para rendir</h2>
 
                 <div className="flex gap-1 items-center">
                   <div className="relative">
@@ -1147,42 +1251,57 @@ export default function RendicionesPage() {
               </div>
             </div>
 
-            {/* Listado de gastos - ocupa el alto disponible restante */}
+            {/* Listado de gastos de AR - ocupa el alto disponible restante */}
             <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col gap-6 p-4">
-              {selectedTab === "eliminados" ? (
+              {Object.entries(actividadesPorFederacion).length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-4">
                   <div className="flex flex-col gap-3 items-center max-w-md text-center">
                     <div className="size-16 rounded-full bg-muted flex items-center justify-center">
-                      <Trash2 className="size-8 text-muted-foreground" />
+                      <CircleDollarSign className="size-8 text-muted-foreground" />
                     </div>
                     <div className="flex flex-col gap-2">
                       <h3 className="text-lg font-semibold text-foreground">
-                        No hay gastos eliminados
+                        No hay actividades
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Aquí se mostrarán los gastos que sean eliminados de la actividad deportiva. Los gastos eliminados se mantendrán en este listado para referencia histórica.
+                        No hay actividades disponibles para agregar gastos de AR.
                       </p>
                     </div>
                   </div>
                 </div>
-              ) : selectedTab !== "viaticos" && Object.entries(gastosPorFederacion).map(([federacion, actividades]) => (
-                <div key={federacion} className="flex flex-col gap-12">
-                  {/* Título de Federación sticky */}
-                  <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-[36px] pt-3">
-                    <h2 className="text-xl font-semibold ">{federacion}</h2>
-                  </div>
-                  
-                  {Object.entries(actividades).map(([actividad, gastos]) => (
+              ) : Object.entries(actividadesPorFederacion)
+                .filter(([federacion]) => {
+                  // Filtrar por federación si hay filtros activos
+                  if (selectedFederaciones.size > 0 && !selectedFederaciones.has(federacion)) {
+                    return false
+                  }
+                  return true
+                })
+                .map(([federacion, actividadesSet]) => {
+                // Convertir Set a Array y ordenar
+                const actividadesArray = Array.from(actividadesSet).sort()
+                
+                return (
+                  <div key={federacion} className="flex flex-col gap-12">
+                    {/* Título de Federación sticky */}
+                    <div className="sticky top-0 z-20 bg-background pb-0 -mt-4 -mx-4 px-[36px] pt-3">
+                      <h2 className="text-xl font-semibold ">{federacion}</h2>
+                    </div>
+                    
+                    {actividadesArray.map((actividad) => {
+                      // Obtener gastos de AR para esta actividad (puede estar vacío)
+                      const gastos = gastosARPorFederacion[federacion]?.[actividad] || []
+                    const montoFaltante = calcularMontoFaltantePorActividad(actividad)
+                    
+                    return (
                     <div key={actividad} className="flex flex-col gap-8">
                       {/* Título de Actividad sticky - debajo del de federación */}
-                      <div className="sticky top-[40px] z-10 bg-background pb-0 -mt-4 -mx-4 px-[36px] pt-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-medium text-muted-foreground">{actividad}</h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-muted-foreground">
-                              {gastos.length} gastos
-                            </span>
+                      <div className="sticky top-[40px] z-10 bg-background pb-2 -mt-4 -mx-4 px-[36px] pt-0">
+                        <div className="flex flex-col gap-3">
+                          {/* Primera fila: nombre de actividad y botón de tres puntos */}
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-md font-medium text-muted-foreground">{actividad}</h3>
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1207,233 +1326,155 @@ export default function RendicionesPage() {
                               </PopoverContent>
                             </Popover>
                           </div>
+                          
+                          {/* Segunda fila: botón agregar gasto y mensaje de monto faltante */}
+                          <div className="flex items-center justify-start gap-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                setActividadParaAgregarGasto({ federacion, actividad })
+                                setIsCrearViaticoOpen(true)
+                              }}
+                            >
+                              <Plus className="size-3.5 mr-1.5" />
+                              Agregar gasto
+                            </Button>
+                            
+                            {/* Mensaje de monto faltante con tooltip */}
+                            {montoFaltante > 0 && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <div className="flex items-center gap-1 cursor-pointer">
+                                    <Info className="size-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                      Te faltan {formatCurrency(montoFaltante)} por agregar
+                                    </span>
+                                  </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-3" align="start">
+                                  <p className="text-xs text-foreground">
+                                    Parte de los gastos viabilizados de esta actividad que aún no han sido transformados en Gastos de AR para rendir
+                                  </p>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
                         </div>
                       </div>
 
                       <div className="flex flex-col border-t">
-                        {gastos.map((gasto, index) => {
-                      const esParteDeViaticos = gasto.parteDeViaticos && gasto.parteDeViaticos.length > 0
-                      const esViatico = gasto.esViatico
-                      const puedeInteractuar = !esParteDeViaticos
-
-                      return (
-                        <div
-                          key={gasto.id}
-                          className={cn(
-                            "flex gap-4 items-start p-2 border-b transition-colors",
-                            puedeInteractuar && "cursor-pointer hover:bg-muted/50",
-                            selectedGasto?.id === gasto.id && "bg-accent"
-                          )}
-                          onClick={() => puedeInteractuar && setSelectedGasto(gasto)}
-                        >
-                          <div className="flex-1 flex gap-2 min-w-[200px] p-3">
-                            <div className="flex-1 flex flex-col gap-1">
-                              <h4 className={cn(
-                                "text-base font-semibold",
-                                esParteDeViaticos && "line-through text-muted-foreground"
-                              )}>
-                                {gasto.tipoGasto}
-                              </h4>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {esParteDeViaticos && gasto.parteDeViaticos && (
-                                  <div className="flex flex-wrap items-center gap-1">
-                                    <span className="text-xs text-muted-foreground">
-                                      Incluído en viático{gasto.parteDeViaticos.length > 1 ? "s" : ""}:
-                                    </span>
-                                    {gasto.parteDeViaticos.map((parte, idx) => (
-                                      <button
-                                        key={parte.viaticoId}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          // Buscar el gasto de viático correspondiente y seleccionarlo
-                                          const gastoViatico = grupoActual?.gastos.find(
-                                            g => g.esViatico && g.viaticoId === parte.viaticoId
-                                          )
-                                          if (gastoViatico) {
-                                            setSelectedGasto(gastoViatico)
-                                          }
-                                        }}
-                                        className="text-xs text-primary hover:underline"
-                                      >
-                                        {parte.nombreViatico}
-                                        {gasto.parteDeViaticos && idx < gasto.parteDeViaticos.length - 1 && ","}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                        {false && gastos.length === 0 ? (
+                          <div className="border border-border rounded-xl p-6 max-w-[600px] mx-auto my-12">
+                            <div className="flex flex-col gap-6 items-center text-center">
+                              <div className="size-8 flex items-center justify-center">
+                                <Info className="size-8 text-foreground" />
                               </div>
-                              <p className={cn(
-                                "text-sm line-clamp-2",
-                                esParteDeViaticos ? "text-muted-foreground line-through" : "text-foreground"
-                              )}>
-                                {gasto.descripcion}
-                              </p>
+                              <div className="flex flex-col gap-1">
+                                <p className="text-base font-semibold text-foreground leading-6">
+                                  Tienes {formatCurrency(calcularMontoDisponiblePorActividad(actividad))} disponibles en gastos viabilizados para esta actividad
+                                </p>
+                                <p className="text-base font-normal text-foreground leading-6">
+                                  Agrega los gastos de la misma forma en que corresponde para subirlos al sistema AR del IND
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                className="mt-2"
+                                onClick={() => {
+                                  setActividadParaAgregarGasto({ federacion, actividad })
+                                  setIsCrearViaticoOpen(true)
+                                }}
+                              >
+                                <Plus className="size-4 mr-2" />
+                                Agregar gasto
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
-                            {!esParteDeViaticos && (() => {
-                              const requisitosListos = gasto.documentosRequeridos.filter(d => d.subido).length
-                              const totalRequisitos = gasto.documentosRequeridos.length
-                              const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
-                              const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
-                              return (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
-                                  <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
-                                    <div
-                                      className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
-                                      style={{ width: `${porcentaje}%` }}
-                                    />
+                        ) : (
+                          gastos.map((gasto) => {
+                            return (
+                              <div
+                                key={gasto.id}
+                                className={cn(
+                                  "flex gap-4 items-start p-2 border-b transition-colors cursor-pointer hover:bg-muted/50",
+                                  selectedGasto?.id === gasto.id && "bg-accent"
+                                )}
+                                onClick={() => setSelectedGasto(gasto)}
+                              >
+                                <div className="flex-1 flex gap-2 min-w-[200px] p-3">
+                                  <div className="flex-1 flex flex-col gap-1">
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {gasto.tipoGasto}
+                                    </p>
+                                    <p className="text-sm line-clamp-2 text-foreground">
+                                      {gasto.descripcion}
+                                    </p>
                                   </div>
                                 </div>
-                              )
-                            })()}
-                          </div>
-                          <div className="flex-1 flex items-center justify-end p-3">
-                            <p className={cn(
-                              "text-sm",
-                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
-                            )}>
-                              {formatCurrency(gasto.costoUnitario)}
-                            </p>
-                          </div>
-                          <div className="w-16 flex items-center justify-end p-3">
-                            <p className={cn(
-                              "text-sm",
-                              esParteDeViaticos ? "text-muted-foreground line-through" : "text-muted-foreground"
-                            )}>
-                              {gasto.cantidad}
-                            </p>
-                          </div>
-                          <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
-                            <p className={cn(
-                              "text-sm font-medium",
-                              esParteDeViaticos ? "text-muted-foreground line-through" : ""
-                            )}>
-                              {formatCurrency(gasto.costoTotal)}
-                            </p>
-                          </div>
-                        </div>
-                        )
-                      })}
+                                <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
+                                  {(() => {
+                                    const requisitosListos = gasto.documentosRequeridos.filter(d => d.subido).length
+                                    const totalRequisitos = gasto.documentosRequeridos.length
+                                    const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
+                                    const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
+                                    return (
+                                      <div className="flex flex-col gap-1">
+                                        <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
+                                        <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
+                                          <div
+                                            className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
+                                            style={{ width: `${porcentaje}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                                <div className="flex-1 flex flex-col items-end justify-center p-3 gap-0.5">
+                                  <p className="text-sm text-muted-foreground">
+                                    {gasto.cantidad} unidades
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatCurrency(gasto.costoUnitario)} c/u
+                                  </p>
+                                </div>
+                                <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
+                                  <p className="text-sm font-medium">
+                                    {formatCurrency(gasto.costoTotal)}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ))}
-
-              {/* Sección de Viáticos */}
-              {selectedTab !== "eliminados" && (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between py-3 -mx-4 px-[36px]">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-medium">Viáticos</h3>
+                    )
+                  })}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      {gastosViaticos.length} viático{gastosViaticos.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
+                )
+              })}
 
-                <div className="flex flex-col border-t">
-                  {gastosViaticos.length > 0 ? (
-                    gastosViaticos.map((gasto) => {
-                      const puedeInteractuar = true
-
-                      return (
-                        <div
-                          key={gasto.id}
-                          className={cn(
-                            "flex gap-4 items-start p-2 border-b transition-colors",
-                            puedeInteractuar && "cursor-pointer hover:bg-muted/50",
-                            selectedGasto?.id === gasto.id && "bg-accent"
-                          )}
-                          onClick={() => puedeInteractuar && setSelectedGasto(gasto)}
-                        >
-                          <div className="flex-1 flex gap-2 min-w-[200px] p-3">
-                            <div className="flex-1 flex flex-col gap-1">
-                              <h4 className="text-base font-semibold">
-                                {gasto.tipoGasto}
-                              </h4>
-                              <p className="text-sm line-clamp-2 text-foreground">
-                                {gasto.descripcion}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex-1 flex flex-col items-start justify-center p-3 gap-1">
-                            {(() => {
-                              const requisitosListos = gasto.documentosRequeridos.filter(d => d.subido).length
-                              const totalRequisitos = gasto.documentosRequeridos.length
-                              const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
-                              const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
-                              return (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
-                                  <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
-                                    <div
-                                      className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
-                                      style={{ width: `${porcentaje}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              )
-                            })()}
-                          </div>
-                          <div className="flex-1 flex items-center justify-end p-3">
-                            <p className="text-sm text-muted-foreground">
-                              {formatCurrency(gasto.costoUnitario)}
-                            </p>
-                          </div>
-                          <div className="w-16 flex items-center justify-end p-3">
-                            <p className="text-sm text-muted-foreground">
-                              {gasto.cantidad}
-                            </p>
-                          </div>
-                          <div className="flex-1 flex items-center justify-end min-w-[128px] p-3">
-                            <p className="text-sm font-medium">
-                              {formatCurrency(gasto.costoTotal)}
-                            </p>
-                          </div>
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <p className="text-sm">No hay viáticos creados</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Botón agregar viático */}
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setIsCrearViaticoOpen(true)}
-                  >
-                    <CircleDollarSign className="size-4" />
-                    Agregar un viático
-                  </Button>
-                </div>
-              </div>
-              )}
               </div>
             </div>
           </div>
 
           {/* Panel derecho */}
           {selectedGasto && (
-            <GastoDetailPanel>
-              <GastoDetailPanel.Header onClose={() => setSelectedGasto(null)}>
+            <GastoDetailPanel onClose={() => setSelectedGasto(null)}>
+              <GastoDetailPanel.Header>
                 <GastoDetailPanel.Info>
-                  <p className="text-sm text-muted-foreground">{selectedGasto.actividad}</p>
-                  <p className="text-sm text-muted-foreground">{selectedGasto.federacion}</p>
+                  <div className="flex flex-col gap-0">
+                    <p className="text-sm font-semibold text-foreground">{selectedGasto.federacion}</p>
+                    <p className="text-sm font-normal text-muted-foreground">{selectedGasto.actividad}</p>
+                  </div>
                   <h3 className="text-lg font-semibold">{selectedGasto.tipoGasto}</h3>
-                  <p className="text-sm text-foreground line-clamp-2">
+                  <p className="text-sm font-normal text-foreground line-clamp-2">
                     {selectedGasto.descripcion}
                   </p>
-                  <p className="text-sm font-semibold">{formatCurrency(selectedGasto.costoTotal)}</p>
+                  <p className="text-sm font-semibold text-foreground">{formatCurrency(selectedGasto.costoTotal)}</p>
                 </GastoDetailPanel.Info>
                 <GastoDetailPanel.Actions
                   onAddDocument={() => {
@@ -1456,30 +1497,31 @@ export default function RendicionesPage() {
                     setIsEliminarViaticoOpen(true)
                   } : undefined}
                   isViatico={selectedGasto.esViatico || false}
-                >
-                  {(() => {
+                />
+              </GastoDetailPanel.Header>
+
+              <GastoDetailPanel.Content>
+                {/* Contenedor de requisitos originales */}
+                <GastoDetailPanel.RequisitosSection 
+                  title="Requisitos para rendición"
+                  progress={(() => {
                     const requisitosListos = selectedGasto.documentosRequeridos.filter(d => d.subido).length
                     const totalRequisitos = selectedGasto.documentosRequeridos.length
                     const porcentaje = totalRequisitos > 0 ? (requisitosListos / totalRequisitos) * 100 : 0
                     const estaCompleto = requisitosListos === totalRequisitos && totalRequisitos > 0
                     return (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium">{requisitosListos}/{totalRequisitos} listos</span>
-                        <div className="bg-muted h-1.5 w-12 rounded-full overflow-hidden outline outline-1 outline-border">
+                      <>
+                        <div className="bg-muted h-2 w-[60px] rounded-full overflow-hidden">
                           <div
                             className={cn("h-full transition-all", estaCompleto ? "bg-green-600" : "bg-slate-500")}
                             style={{ width: `${porcentaje}%` }}
                           />
                         </div>
-                      </div>
+                        <span className="text-sm font-medium">{requisitosListos}/{totalRequisitos} listos</span>
+                      </>
                     )
                   })()}
-                </GastoDetailPanel.Actions>
-              </GastoDetailPanel.Header>
-
-              <GastoDetailPanel.Content>
-                {/* Contenedor de requisitos originales */}
-                <GastoDetailPanel.RequisitosSection title="Requisitos para rendición">
+                >
                   <div className="flex flex-col">
                     {selectedGasto.documentosRequeridos.map((doc) => (
                       <button
@@ -1533,7 +1575,7 @@ export default function RendicionesPage() {
                 </GastoDetailPanel.RequisitosSection>
                 
                 {/* Contenedor de documentos adicionales y aclaraciones - siempre visible */}
-                <GastoDetailPanel.AdicionalesSection title="Información adicional">
+                <GastoDetailPanel.AdicionalesSection title="Anexos">
                   <div className="flex flex-col">
                     {/* Documentos adicionales */}
                     {selectedGasto.documentosAdicionales?.map((doc) => (
@@ -1993,13 +2035,17 @@ export default function RendicionesPage() {
         />
       )}
 
-      {/* Modal para crear viático */}
+      {/* Modal para crear gasto de AR */}
       <CrearViaticoModal
         open={isCrearViaticoOpen}
-        onOpenChange={setIsCrearViaticoOpen}
+        onOpenChange={(open) => {
+          setIsCrearViaticoOpen(open)
+          if (!open) setActividadParaAgregarGasto(null)
+        }}
         gastosDisponibles={grupoActual?.gastos.filter(g => !g.esViatico) || []}
         beneficiariosDisponibles={beneficiariosDisponibles}
         onGuardar={handleGuardarViatico}
+        actividadOrigen={actividadParaAgregarGasto?.actividad}
       />
 
       {/* Modal de detalles del viático */}

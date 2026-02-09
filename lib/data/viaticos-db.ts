@@ -1,4 +1,10 @@
-// Tipos e interfaces para la funcionalidad de viáticos
+// Tipos e interfaces para la funcionalidad de Gastos de AR para rendir
+
+export type CategoriaGastoAR = 
+  | "Viático" 
+  | "Honorarios" 
+  | "Alimentación y alojamiento" 
+  | "Pasajes/Traslados/peajes"
 
 export interface BeneficiarioViatico {
   id: string
@@ -20,14 +26,19 @@ export interface GastoViatico {
   costoTotal: number
 }
 
-export interface Viatico {
+export interface GastoAR {
   id: string
+  categoria: CategoriaGastoAR
   nombre: string
   gastos: GastoViatico[]
   beneficiarios: string[] // IDs de beneficiarios
   costoTotal: number
   fechaCreacion: string
+  actividadOrigen?: string // Actividad de origen de los gastos
 }
+
+// Mantener Viatico para compatibilidad
+export type Viatico = GastoAR
 
 // Datos mock de beneficiarios
 export const beneficiariosDisponibles: BeneficiarioViatico[] = [

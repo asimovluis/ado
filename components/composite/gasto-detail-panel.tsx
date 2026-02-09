@@ -9,16 +9,27 @@ import { cn } from "@/lib/utils"
 interface GastoDetailPanelProps {
   children: React.ReactNode
   className?: string
+  onClose?: () => void
 }
 
 const GastoDetailPanel = React.forwardRef<HTMLDivElement, GastoDetailPanelProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, onClose, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn("border-l border-border w-[380px] shrink-0 flex flex-col h-full relative overflow-y-auto", className)}
+        className={cn("border-l border-border w-[380px] shrink-0 flex flex-col h-full relative overflow-y-auto pt-14 pb-4 px-4 gap-8", className)}
         {...props}
       >
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 absolute top-4 right-4 z-10"
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        )}
         {children}
       </div>
     )
@@ -27,27 +38,16 @@ const GastoDetailPanel = React.forwardRef<HTMLDivElement, GastoDetailPanelProps>
 GastoDetailPanel.displayName = "GastoDetailPanel"
 
 interface GastoDetailPanelHeaderProps extends React.ComponentProps<"div"> {
-  onClose?: () => void
 }
 
 const GastoDetailPanelHeader = React.forwardRef<HTMLDivElement, GastoDetailPanelHeaderProps>(
-  ({ className, onClose, children, ...props }, ref) => {
+  ({ className, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn("flex flex-col gap-5 p-3 border-b bg-background relative", className)}
+        className={cn("flex flex-col gap-5 p-4 border border-border rounded-lg bg-background", className)}
         {...props}
       >
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 absolute top-[8px] right-[8px] z-10"
-            onClick={onClose}
-          >
-            <X className="size-4" />
-          </Button>
-        )}
         {children}
       </div>
     )
@@ -62,7 +62,7 @@ const GastoDetailPanelContent = React.forwardRef<HTMLDivElement, GastoDetailPane
     return (
       <div
         ref={ref}
-        className={cn("flex flex-col gap-8 p-4", className)}
+        className={cn("flex flex-col gap-8", className)}
         {...props}
       >
         {children}
@@ -113,10 +113,10 @@ const GastoDetailPanelActions = React.forwardRef<HTMLDivElement, GastoDetailPane
           <Button
             variant="default"
             size="sm"
-            className="w-[140px]"
+            className="w-[128px]"
             onClick={onVerPdf}
           >
-            PDF
+            PDF rendición
           </Button>
           {isViatico && onVerViatico && (
             <Button
@@ -124,7 +124,7 @@ const GastoDetailPanelActions = React.forwardRef<HTMLDivElement, GastoDetailPane
               size="sm"
               onClick={onVerViatico}
             >
-              Ver viático
+              Detalle del gasto
             </Button>
           )}
           <Popover>
@@ -165,14 +165,14 @@ const GastoDetailPanelActions = React.forwardRef<HTMLDivElement, GastoDetailPane
                       onClick={onEditarViatico}
                     >
                       <Pencil className="size-4" />
-                      <span>Editar viático</span>
+                      <span>Editar gasto</span>
                     </button>
                     <button
                       className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-accent text-sm text-destructive text-left"
                       onClick={onEliminarViatico}
                     >
                       <Trash2 className="size-4" />
-                      <span>Eliminar viático</span>
+                      <span>Eliminar gasto</span>
                     </button>
                   </>
                 )}
@@ -188,10 +188,11 @@ GastoDetailPanelActions.displayName = "GastoDetailPanelActions"
 
 interface RequisitosSectionProps extends React.ComponentProps<"div"> {
   title?: string
+  progress?: React.ReactNode
 }
 
 const RequisitosSection = React.forwardRef<HTMLDivElement, RequisitosSectionProps>(
-  ({ className, title, children, ...props }, ref) => {
+  ({ className, title, progress, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -199,9 +200,16 @@ const RequisitosSection = React.forwardRef<HTMLDivElement, RequisitosSectionProp
         {...props}
       >
         {title && (
-          <p className="text-base font-medium text-foreground">
-            {title}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-base font-semibold text-foreground">
+              {title}
+            </p>
+            {progress && (
+              <div className="flex items-center gap-2 justify-start">
+                {progress}
+              </div>
+            )}
+          </div>
         )}
         <div className="border rounded-lg">
           {children}
